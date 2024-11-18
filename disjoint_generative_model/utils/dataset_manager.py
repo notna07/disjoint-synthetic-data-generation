@@ -5,6 +5,8 @@
 from typing import Dict, List
 from pandas import DataFrame
 
+from sklearn.preprocessing import LabelEncoder
+
 def random_split_columns(dataset: DataFrame, split_ratios: Dict[str, float], random_state: int = None) -> Dict[str, List[str]]:
     """ Randomly split the columns of a dataset into different splits
 
@@ -70,6 +72,12 @@ class DataManager:
             original_dataset (DataFrame): The original dataset.
             prepared_splits (Dict[str, List[str]], optional): A dictionary where keys are split names and values are lists of column names. Defaults to None.
         """
+
+        self.cats_cols = original_dataset.select_dtypes(include=['object']).columns.tolist()
+        if len(self.cats_cols) > 0:
+            self.cat_encoder = LabelEncoder()
+            original_dataset[self.cats_cols] = original_dataset[self.cats_cols].apply(self.cat_encoder.fit_transform)
+
         self.original_dataset = original_dataset
 
         if prepared_splits is not None:
@@ -110,7 +118,11 @@ class DataManager:
             >>> postprocessed_df.columns.tolist()
             ['A', 'B']
         """
-        return generated_dataset[self.original_dataset.columns]
+        generated_dataset = generated_dataset[self.original_dataset.columns]
+
+        if len(self.cats_cols) > 0:
+            generated_dataset[self.cats_cols] = generated_dataset[self.cats_cols].apply(self.cat_encoder.inverse_transform)
+        return generated_dataset
 
 
 if __name__ == "__main__":
