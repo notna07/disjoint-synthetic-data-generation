@@ -1,6 +1,5 @@
 # Description: Class for keeping track of the original dataset and for postprocessing the generated dataset
 # Date: 14-11-2024
-# Version: 0.1
 # Author : Anton D. Lautrup
 
 from typing import Dict, List
