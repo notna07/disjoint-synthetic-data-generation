@@ -1,0 +1,11 @@
+class,age,sex,height,weight,income,education
+0,25,M,180,75,50000,Bachelor's
+1,30,F,165,60,60000,Master's
+1,35,M,175,80,70000,PhD
+0,28,F,160,55,55000,Bachelor's
+0,32,M,185,90,80000,Master's
+1,27,F,170,65,65000,PhD
+1,31,M,190,85,75000,Bachelor's
+0,29,F,155,50,52000,Master's
+0,33,M,170,75,60000,PhD
+1,26,F,175,65,68000,Bachelor's
