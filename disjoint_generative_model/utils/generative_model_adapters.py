@@ -25,7 +25,7 @@ def _cleanup_files(file_names: List[str]) -> None:
 
 class DataGeneratorAdapter(ABC):
     @abstractmethod
-    def generate(self, train_data_name: str) -> DataFrame:
+    def generate(self, train_data_name: str, num_to_generate: int = None) -> DataFrame:
         """ Generate synthetic data based on the training data.
 
         Args:
@@ -45,7 +45,7 @@ class SynthCityAdapter(DataGeneratorAdapter):
     def __init__(self, gen_model):
         self.gen_model = gen_model
 
-    def generate(self, train_data: str | DataFrame) -> DataFrame:
+    def generate(self, train_data: str | DataFrame, num_to_generate: int = None) -> DataFrame:
         """ Generate synthetic data using SynthCity.
 
         Reference:
@@ -74,11 +74,12 @@ class SynthCityAdapter(DataGeneratorAdapter):
         syn_model = Plugins().get(self.gen_model)
         syn_model.fit(df_train)
 
-        df_syn = syn_model.generate(count=len(df_train)).dataframe()
+        if num_to_generate is None: num_to_generate = len(df_train)
+        df_syn = syn_model.generate(count=num_to_generate).dataframe()
         return df_syn
 
 class SynthPopAdapter(DataGeneratorAdapter):
-    def generate(self, train_data: str | DataFrame) -> DataFrame:
+    def generate(self, train_data: str | DataFrame, num_to_generate: int = None) -> DataFrame:
         """ Generate synthetic data using SynthPop.
 
         Reference:
@@ -115,7 +116,8 @@ class SynthPopAdapter(DataGeneratorAdapter):
                     "Rscript",
                     "disjoint_generative_model/utils/subprocess/synthpop_subprocess.R",
                     train_data_name +".csv",
-                    train_data_name + "_synthpop"
+                    train_data_name + "_synthpop",
+                    str(num_to_generate) if num_to_generate is not None else str(len(df_train)),
                 ]
         subprocess.run(command, check=True)
 
@@ -130,7 +132,7 @@ class SynthPopAdapter(DataGeneratorAdapter):
         return df_syn
 
 class DataSynthesizerAdapter(DataGeneratorAdapter):
-    def generate(self, train_data: str | DataFrame) -> DataFrame:
+    def generate(self, train_data: str | DataFrame, num_to_generate: int = None) -> DataFrame:
         """ Generate synthetic data using DataSynthesizer.
 
         Reference:
@@ -172,7 +174,9 @@ class DataSynthesizerAdapter(DataGeneratorAdapter):
         describer.save_dataset_description_to_file(description_file)
 
         generator = DataGenerator()
-        generator.generate_dataset_in_correlated_attribute_mode(len(df_train), description_file)
+
+        if num_to_generate is None: num_to_generate = len(df_train)
+        generator.generate_dataset_in_correlated_attribute_mode(num_to_generate, description_file)
 
         df_syn = generator.synthetic_dataset
 
@@ -181,10 +185,12 @@ class DataSynthesizerAdapter(DataGeneratorAdapter):
         return df_syn
 
 class DebugAdapter(DataGeneratorAdapter):
-    def generate(self, train_data_name: str) -> DataFrame:
-        return _load_data(train_data_name)
+    def generate(self, train_data: str, num_to_generate: int = None) -> DataFrame:
+        if isinstance(train_data, str):
+            train_data = _load_data(train_data)
+        return train_data
 
-def generate_synthetic_data(train_data: DataFrame | str, gen_model: str) -> DataFrame:
+def generate_synthetic_data(train_data: DataFrame | str, gen_model: str, num_to_generate: int = None) -> DataFrame:
     """ Generate synthetic data using the specified generative model.
 
     Args:
@@ -214,7 +220,7 @@ def generate_synthetic_data(train_data: DataFrame | str, gen_model: str) -> Data
 
     if gen_model in adapters:
         adapter = adapters[gen_model]
-        df_syn = adapter.generate(train_data)
+        df_syn = adapter.generate(train_data, num_to_generate)
     else:
         raise NotImplementedError("The chosen generative model could not be run!")
 

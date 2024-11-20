@@ -4,10 +4,15 @@
 
 library(synthpop)
 
-synthpop_random <- function(input_csv, output_name) {
+synthpop_random <- function(input_csv, output_name, num_to_generate) {
     data <- read.csv(input_csv)
 
-    mysyn <- syn(data, method = "cart", minnumlevels = 3, print.flag = FALSE)
+    mysyn <- syn(data,
+                method = "cart",
+                k = num_to_generate,
+                minnumlevels = 3,
+                print.flag = FALSE
+                )
 
     write.syn(mysyn,
             output_name,
@@ -21,6 +26,7 @@ synthpop_random <- function(input_csv, output_name) {
 args <- commandArgs(trailingOnly = TRUE)
 input_file <- args[1]
 output_file <- args[2]
+num_to_generate <- as.numeric(args[3])
 
 # Call the function with arguments
-synthpop_random(input_file, output_file)
+synthpop_random(input_file, output_file, num_to_generate)
