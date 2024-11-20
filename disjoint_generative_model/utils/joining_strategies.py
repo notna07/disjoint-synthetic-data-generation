@@ -8,7 +8,7 @@ from pandas import DataFrame
 from typing import Dict, List
 from abc import ABC, abstractmethod
 
-class Strategy(ABC):
+class JoinStrategy(ABC):
     """ Strategy interface for joining dataframes. Declares operations common 
     to all supported algorithms.
 
@@ -31,7 +31,7 @@ class Strategy(ABC):
 interface. The interface makes them interchangeable in the Context.
 """
 
-class Concatenating(Strategy):
+class Concatenating(JoinStrategy):
     def join(self, data: Dict[str, DataFrame]) -> DataFrame:
         """ Joins the dataframes using concatenation.
 
@@ -57,7 +57,7 @@ class Concatenating(Strategy):
         joined_data = pd.concat(data.values(), axis=1)
         return joined_data
 
-class RandomJoining(Strategy):
+class RandomJoining(JoinStrategy):
     def __init__(self, random_state: int = None) -> None:
         self.random_state = random_state
         pass
@@ -86,11 +86,10 @@ class RandomJoining(Strategy):
         """
         for key in data:
             data[key] = data[key].sample(frac=1, random_state = self.random_state)
-        joined_data = pd.concat(data.values(), axis=1).reset_index(drop=True)
-        return joined_data
+        return pd.concat(data.values(), axis=1).reset_index(drop=True)
 
-from joining_validator import JoiningValidator
-class UsingJoiningValidator(Strategy):
+from utils.joining_validator import JoiningValidator
+class UsingJoiningValidator(JoinStrategy):
     def __init__(self, join_validator_model: JoiningValidator,
                  patience: int = 10, 
                  max_iter: int = 100,
@@ -163,63 +162,7 @@ class UsingJoiningValidator(Strategy):
                 break
         return df_good_joins
 
-class JoiningModule(ABC):
-    """ Module for joining dataframes using different strategies.
-    
-    Attributes:
-        strategy (Strategy): The strategy to use for joining dataframes.
-    """
-
-    def __init__(self, strategy: Strategy) -> None:
-        """ Module for joining dataframes using different strategies.
-
-        Args:
-            strategy (Strategy): The strategy to use for joining dataframes.
-        """
-
-        self._strategy = strategy
-        pass
-
-    @property
-    def strategy(self) -> Strategy:
-        """ Get the current strategy for joining dataframes."""
-        return self._strategy
-
-    @strategy.setter
-    def strategy(self, strategy: Strategy) -> None:
-        """ Change the current strategy for joining dataframes."""
-        self._strategy = strategy
-
-    def perform_joining(self, data: Dict[str, DataFrame]) -> DataFrame:
-        """ Perform the joining of dataframes using the current strategy.
-
-        Args:
-            data (Dict[str, DataFrame]): The data to join.
-        """
-        self.joined_data = self._strategy.join(data)
-        return self.joined_data.copy()
-    
-    def evaluate_joining(self, reference_data) -> None:
-        # TODO: Calculate fraction of identical rows between joined data and reference data
-        # TODO: Calculate record number difference between joined data and reference data
-        # TODO: Calculate some other metric
-        pass
-
-
 if __name__ == "__main__":
     import doctest
     doctest.ELLIPSIS_MARKER = '-etc-'
     doctest.testmod()
-
-    # The client code picks a concrete strategy and passes it to the context.
-    # The client should be aware of the differences between strategies in order
-    # to make the right choice.
-
-    # context = Context(ConcreteStrategyA())
-    # print("Client: Strategy is set to normal sorting.")
-    # context.do_some_business_logic()
-    # print()
-
-    # print("Client: Strategy is set to reverse sorting.")
-    # context.strategy = ConcreteStrategyB()
-    # context.do_some_business_logic()
