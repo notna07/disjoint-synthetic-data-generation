@@ -160,6 +160,7 @@ cython_debug/
 #.idea/
 tests/dummy_synthpop.csv
 /.vscode
+/.workspace
 
 # Ignore SynthEval files
 SE_*
