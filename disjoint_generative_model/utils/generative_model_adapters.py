@@ -10,9 +10,18 @@ from typing import List
 from pandas import DataFrame
 from abc import ABC, abstractmethod
 
-def _load_data(train_data_name):
-    df_train = pd.read_csv(train_data_name +'_train.csv').dropna()
+def _load_data(file_name: str) -> DataFrame:
+    df_train = pd.read_csv(file_name + '.csv').dropna()
     return df_train
+
+def _write_data(df: DataFrame, file_name: str) -> None:
+    df.to_csv(file_name, index=False)
+
+def _cleanup_files(file_names: List[str]) -> None:
+    for file_name in file_names:
+        if os.path.exists(file_name):
+            os.remove(file_name)
+    pass
 
 class DataGeneratorAdapter(ABC):
     @abstractmethod
@@ -36,7 +45,7 @@ class SynthCityAdapter(DataGeneratorAdapter):
     def __init__(self, gen_model):
         self.gen_model = gen_model
 
-    def generate(self, train_data_name: str) -> DataFrame:
+    def generate(self, train_data: str | DataFrame) -> DataFrame:
         """ Generate synthetic data using SynthCity.
 
         Reference:
@@ -51,13 +60,16 @@ class SynthCityAdapter(DataGeneratorAdapter):
 
         Example:
             >>> adapter = SynthCityAdapter('privbayes')
-            >>> df_syn = adapter.generate('tests/dummy') # doctest: +ELLIPSIS
+            >>> df_syn = adapter.generate('tests/dummy_train') # doctest: +ELLIPSIS
             -etc-
             >>> isinstance(df_syn, pd.DataFrame)
             True
         """
         from synthcity.plugins import Plugins
-        df_train = _load_data(train_data_name)
+        if isinstance(train_data, str):
+            df_train = _load_data(train_data)
+        else:
+            df_train = train_data
 
         syn_model = Plugins().get(self.gen_model)
         syn_model.fit(df_train)
@@ -66,7 +78,7 @@ class SynthCityAdapter(DataGeneratorAdapter):
         return df_syn
 
 class SynthPopAdapter(DataGeneratorAdapter):
-    def generate(self, train_data_name: str) -> DataFrame:
+    def generate(self, train_data: str | DataFrame) -> DataFrame:
         """ Generate synthetic data using SynthPop.
 
         Reference:
@@ -81,11 +93,18 @@ class SynthPopAdapter(DataGeneratorAdapter):
 
         Example:
             >>> adapter = SynthPopAdapter()
-            >>> df_syn = adapter.generate('tests/dummy')
+            >>> df_syn = adapter.generate('tests/dummy_train')
             >>> isinstance(df_syn, pd.DataFrame)
             True
         """
-        import os, subprocess
+        import subprocess
+
+        if isinstance(train_data, str):
+            train_data_name = train_data
+        else:
+            train_data_name = 'synthpop_temp'
+            _write_data(train_data, train_data_name + '.csv')
+
         df_train = _load_data(train_data_name)
 
         info_dir = 'synthesis_info_' + train_data_name.split('/')[0]
@@ -95,7 +114,7 @@ class SynthPopAdapter(DataGeneratorAdapter):
         command = [
                     "Rscript",
                     "disjoint_generative_model/utils/subprocess/synthpop_subprocess.R",
-                    train_data_name +"_train.csv",
+                    train_data_name +".csv",
                     train_data_name + "_synthpop"
                 ]
         subprocess.run(command, check=True)
@@ -103,13 +122,15 @@ class SynthPopAdapter(DataGeneratorAdapter):
         df_syn = pd.read_csv(train_data_name + '_synthpop.csv')
         df_syn.columns = [col for col in df_train.columns]
 
-        os.remove(train_data_name + '_synthpop.csv')
-        os.remove('synthesis_info_' + train_data_name + '_synthpop.txt')
+        _cleanup_files(['synthesis_info_' + train_data_name + '_synthpop.txt', 
+                        train_data_name + '_synthpop.csv', 
+                        'synthpop_temp.csv'])
+
         os.removedirs(info_dir)
         return df_syn
 
 class DataSynthesizerAdapter(DataGeneratorAdapter):
-    def generate(self, train_data_name: str) -> DataFrame:
+    def generate(self, train_data: str | DataFrame) -> DataFrame:
         """ Generate synthetic data using DataSynthesizer.
 
         Reference:
@@ -125,20 +146,26 @@ class DataSynthesizerAdapter(DataGeneratorAdapter):
 
         Example:
             >>> adapter = DataSynthesizerAdapter()
-            >>> df_syn = adapter.generate('tests/dummy') # doctest: +ELLIPSIS
-
+            >>> df_syn = adapter.generate('tests/dummy_train') # doctest: +ELLIPSIS
+            -etc-
             >>> isinstance(df_syn, pd.DataFrame)
             True
         """
         from DataSynthesizer.DataDescriber import DataDescriber
         from DataSynthesizer.DataGenerator import DataGenerator
+
+        if isinstance(train_data, str):
+            train_data_name = train_data
+        else:
+            train_data_name = 'datasynthesizer_temp'
+            _write_data(train_data, train_data_name + '.csv')
+        
         df_train = _load_data(train_data_name)
 
-        input_data = train_data_name +'_train.csv'
         description_file = train_data_name + "_datasynthesizer_info.json"
 
         describer = DataDescriber(category_threshold=10)
-        describer.describe_dataset_in_correlated_attribute_mode(dataset_file=input_data, 
+        describer.describe_dataset_in_correlated_attribute_mode(dataset_file = train_data_name +'.csv', 
                                                                 epsilon=0, 
                                                                 k=2,
                                                                 attribute_to_is_categorical={})
@@ -149,14 +176,15 @@ class DataSynthesizerAdapter(DataGeneratorAdapter):
 
         df_syn = generator.synthetic_dataset
 
-        os.remove(description_file)
+        _cleanup_files([description_file, 'datasynthesizer_temp.csv'])
+
         return df_syn
 
 class DebugAdapter(DataGeneratorAdapter):
     def generate(self, train_data_name: str) -> DataFrame:
         return _load_data(train_data_name)
 
-def generate_synthetic_data(train_data_name: str, gen_model: str) -> DataFrame:
+def generate_synthetic_data(train_data: DataFrame | str, gen_model: str) -> DataFrame:
     """ Generate synthetic data using the specified generative model.
 
     Args:
@@ -167,7 +195,7 @@ def generate_synthetic_data(train_data_name: str, gen_model: str) -> DataFrame:
         DataFrame: The generated synthetic data.
 
     Example:
-        >>> df_syn = generate_synthetic_data('tests/dummy', 'synthpop')
+        >>> df_syn = generate_synthetic_data('tests/dummy_train', 'synthpop')
         >>> isinstance(df_syn, pd.DataFrame)
         True
     """
@@ -186,11 +214,10 @@ def generate_synthetic_data(train_data_name: str, gen_model: str) -> DataFrame:
 
     if gen_model in adapters:
         adapter = adapters[gen_model]
-        df_syn = adapter.generate(train_data_name)
+        df_syn = adapter.generate(train_data)
     else:
         raise NotImplementedError("The chosen generative model could not be run!")
 
-    df_syn.to_csv(train_data_name + '_' + gen_model + '.csv', index=False)
     return df_syn
 
 
