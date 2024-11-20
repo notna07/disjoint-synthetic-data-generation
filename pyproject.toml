@@ -1,0 +1,20 @@
+
+
+
+
+[project]
+name = 'disjoint-generative-model'
+version = 0.1.0
+authors = [{name="Anton D. Lautrup"}]
+dependencies = [
+    "pytest-doctest-ellipsis-markers"
+]
+description = "Exploring the Effects of Disjoint Generation of Synthetic Tabular Data."
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
