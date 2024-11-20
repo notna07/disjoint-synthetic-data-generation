@@ -7,7 +7,7 @@ import warnings
 from typing import Dict, List
 from pandas import DataFrame
 
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import OrdinalEncoder
 
 def random_split_columns(dataset: DataFrame, split_ratios: Dict[str, float], random_state: int = None) -> Dict[str, List[str]]:
     """ Randomly split the columns of a dataset into different splits
@@ -55,6 +55,7 @@ class DataManager:
     Attributes:
         original_dataset (DataFrame): The original dataset.
         encoded_dataset_dict (Dict[str, DataFrame]): The dictionary of encoded datasets.
+        column_splits (Dict[str, List[str]]): The dictionary of the used column splits.
 
     Example:
         >>> import pandas as pd
@@ -81,8 +82,8 @@ class DataManager:
 
         self.cats_cols = original_dataset.select_dtypes(include=['object']).columns.tolist()
         if len(self.cats_cols) > 0:
-            self.cat_encoder = LabelEncoder()
-            original_dataset[self.cats_cols] = original_dataset[self.cats_cols].apply(self.cat_encoder.fit_transform)
+            self.cat_encoder = OrdinalEncoder().fit(original_dataset[self.cats_cols])
+            original_dataset[self.cats_cols] = self.cat_encoder.transform(original_dataset[self.cats_cols])
 
         self.original_dataset = original_dataset
 
@@ -123,10 +124,10 @@ class DataManager:
             >>> postprocessed_df.columns.tolist()
             ['A', 'B']
         """
-        generated_dataset = generated_dataset[self.original_dataset.columns]
+        generated_dataset = generated_dataset[list(self.original_dataset.columns)]
 
         if len(self.cats_cols) > 0:
-            generated_dataset[self.cats_cols] = generated_dataset[self.cats_cols].apply(self.cat_encoder.inverse_transform)
+            generated_dataset[self.cats_cols] = self.cat_encoder.inverse_transform(generated_dataset[self.cats_cols])
         return generated_dataset
 
 
