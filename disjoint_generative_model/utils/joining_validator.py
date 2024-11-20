@@ -38,10 +38,10 @@ def _setup_training_data(dictionary_of_data_chunks: Dict[str, DataFrame],
     correct_joins, incorrect_joins = [], []
     for _, dataset_chunk in dictionary_of_data_chunks.items():
         correct_joins.append(dataset_chunk)
-        incorrect_joins.append(dataset_chunk.sample(frac=num_batches_of_bad_joins, random_state=random_state, replace=True))
+        incorrect_joins.append(dataset_chunk.sample(frac=num_batches_of_bad_joins, random_state=random_state, replace=True).reset_index(drop=True))
 
-    correct_joins = pd.concat(correct_joins,axis=1).reset_index(drop=True)
-    incorrect_joins = pd.concat(incorrect_joins, axis=1).reset_index(drop=True)
+    correct_joins = pd.concat(correct_joins, axis=1, ignore_index=True)
+    incorrect_joins = pd.concat(incorrect_joins, axis=1, ignore_index=True)
 
     train_labels = [1]*len(correct_joins)+[0]*len(incorrect_joins)
 
@@ -140,7 +140,6 @@ class JoiningValidator:
         pred = self.classifier_model.predict(query_data)
         if self.verbose: print(f'Predicted good joins fraction: {(pred==1).mean()}')
         return query_data.loc[pred==1]
-
 
 if __name__ == "__main__":
     import doctest
