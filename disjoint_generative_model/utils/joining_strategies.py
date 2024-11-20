@@ -32,6 +32,7 @@ interface. The interface makes them interchangeable in the Context.
 """
 
 class Concatenating(JoinStrategy):
+    """ Concrete Strategy for joining dataframes using concatenation."""
     def join(self, data: Dict[str, DataFrame]) -> DataFrame:
         """ Joins the dataframes using concatenation.
 
@@ -58,6 +59,7 @@ class Concatenating(JoinStrategy):
         return joined_data
 
 class RandomJoining(JoinStrategy):
+    """ Concrete Strategy for randomly joining dataframes."""
     def __init__(self, random_state: int = None) -> None:
         self.random_state = random_state
         pass
@@ -88,10 +90,11 @@ class RandomJoining(JoinStrategy):
             data[key] = data[key].sample(frac=1, random_state = self.random_state)
         return pd.concat(data.values(), axis=1).reset_index(drop=True)
 
-from utils.joining_validator import JoiningValidator
+from .joining_validator import JoiningValidator
 class UsingJoiningValidator(JoinStrategy):
+    """ Concrete Strategy for joining dataframes using a JoiningValidator model."""
     def __init__(self, join_validator_model: JoiningValidator,
-                 patience: int = 10, 
+                 patience: int = 1, 
                  max_iter: int = 100,
                  ) -> None:
         """ Joins the dataframes randomly, in an iterative process 
