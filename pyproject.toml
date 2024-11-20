@@ -7,7 +7,8 @@ name = 'disjoint-generative-model'
 version = 0.1.0
 authors = [{name="Anton D. Lautrup"}]
 dependencies = [
-    "pytest-doctest-ellipsis-markers"
+    "pytest-doctest-ellipsis-markers",
+    "syntheval >= 1.5.1"
 ]
 description = "Exploring the Effects of Disjoint Generation of Synthetic Tabular Data."
 readme = "README.md"
