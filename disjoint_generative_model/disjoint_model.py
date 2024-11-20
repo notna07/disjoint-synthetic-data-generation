@@ -6,10 +6,10 @@
 from pandas import DataFrame
 from typing import Dict, List
 
-from utils.dataset_manager import DataManager
-from utils.joining_strategies import JoinStrategy, Concatenating
+from .utils.dataset_manager import DataManager
+from .utils.joining_strategies import JoinStrategy, Concatenating
 
-from utils.generative_model_adapters import generate_synthetic_data
+from .utils.generative_model_adapters import generate_synthetic_data
 
 
 class DisjointGenerativeModels:
@@ -59,10 +59,13 @@ class DisjointGenerativeModels:
             if isinstance(self.generative_models, Dict):
                 self.used_splits = self.generative_models
 
-        dm = DataManager(self.original_data.copy(), self.used_splits, len(self.generative_models))
+        self.dm = DataManager(self.original_data.copy(), self.used_splits, len(self.generative_models))
         
-        self.training_data = dm.encoded_dataset_dict
-        self.used_splits = dm.column_splits
+        self.training_data = self.dm.encoded_dataset_dict
+        self.used_splits = self.dm.column_splits
+
+        if hasattr(self._strategy, 'join_validator'):
+            self._strategy.join_validator.fit_classifier(self.training_data)
 
         if isinstance(self.generative_models, Dict):     # get model names from dict to list
             self.generative_models = list(self.generative_models.keys())
@@ -88,14 +91,16 @@ class DisjointGenerativeModels:
             -etc-
         """
         self._setup()
-        
+
         syn_dfs_dict = {}
         for model, (split_name, train_data) in zip(self.generative_models, self.training_data.items()):
             df_syn = generate_synthetic_data(train_data, model)
             syn_dfs_dict[split_name] = df_syn
 
-        self.synthetic_data = self.conduct_joining(syn_dfs_dict)
+        synthetic_data = self.conduct_joining(syn_dfs_dict)
         
+        self.synthetic_data = self.dm.postprocess(synthetic_data)
+
         return self.synthetic_data
 
     def conduct_joining(self, data: Dict[str, DataFrame]) -> DataFrame:
