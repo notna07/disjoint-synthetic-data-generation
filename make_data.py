@@ -79,7 +79,7 @@ if __name__ == '__main__':
         print("Running evaluation...");time.sleep(1)    # Run evaluation
         test_data = pd.read_csv(args.training_data + '_test.csv').dropna()
         SE = SynthEval(training_data, test_data)
-        SE.evaluate(synthetic_data, args.label_col,"full_eval")
+        SE.evaluate(synthetic_data, args.label_col,"full_eval", cls_acc={'F1_type': 'macro'})
 
     print("All done! Exiting..."); time.sleep(5)
     exit()
