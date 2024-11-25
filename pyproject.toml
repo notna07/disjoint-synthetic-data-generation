@@ -1,14 +1,20 @@
-
-
-
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
-name = 'disjoint-generative-model'
-version = 0.1.0
+name = "disjoint-gms"
+version = "0.1.0"
 authors = [{name="Anton D. Lautrup"}]
 dependencies = [
+    "numpy",
+    "pandas",
+    "scipy ~= 1.10.1",
+    "scikit-learn >= 1.2",
+    "syntheval >= 1.5.1",
+    "synthcity >= 0.2.11",
+    "DataSynthesizer ~= 0.1.13",
     "pytest-doctest-ellipsis-markers",
-    "syntheval >= 1.5.1"
 ]
 description = "Exploring the Effects of Disjoint Generation of Synthetic Tabular Data."
 readme = "README.md"
@@ -19,3 +25,11 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
+[tool.hatch.build]
+include = [
+    'disjoint_generative_model',
+    'LICENSE',
+    'README.md',
+]
+[tool.hatch.build.targets.wheel]
+packages = ["disjoint_generative_model"]
