@@ -6,6 +6,8 @@
 from pandas import DataFrame
 from typing import Dict, List
 
+from joblib import Parallel, delayed
+
 from .utils.dataset_manager import DataManager
 from .utils.joining_strategies import JoinStrategy, Concatenating
 
@@ -93,9 +95,8 @@ class DisjointGenerativeModels:
         self._setup()
 
         syn_dfs_dict = {}
-        for model, (split_name, train_data) in zip(self.generative_models, self.training_data.items()):
-            df_syn = generate_synthetic_data(train_data, model)
-            syn_dfs_dict[split_name] = df_syn
+        res = Parallel(n_jobs=-1)(delayed(generate_synthetic_data)(train_data, model, idx) for idx, model, train_data in zip(range(len(self.generative_models)),self.generative_models, self.training_data.values()))
+        syn_dfs_dict = {split_name: df_syn for split_name, df_syn in zip(self.training_data.keys(), res)}
 
         synthetic_data = self.conduct_joining(syn_dfs_dict)
         
@@ -122,7 +123,7 @@ class DisjointGenerativeModels:
             1  2  4  6  8
         """
         if self._strategy is None:
-            self.strategy(Concatenating())
+            self.strategy = Concatenating()
 
         return self._strategy.join(data)
 
