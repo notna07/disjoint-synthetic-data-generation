@@ -27,7 +27,7 @@ for dataset in datasets:
 
 # derm and hepatitis need to have binarized output
 # def binarize_multilevel_outcome_variable(df: pd.DataFrame, outcome_col: str, outcome_new_name: str) -> pd.DataFrame:
-#     df[outcome_col] = df[outcome_col].apply(lambda x: 1 if x != 0 else 0)
+#     df[outcome_col] = df[outcome_col].apply(lambda x: 1 if x != 1 else 0)
 #     df = df.rename(columns={outcome_col: outcome_new_name})
 #     return df
 
