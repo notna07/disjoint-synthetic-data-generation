@@ -77,7 +77,18 @@ class SynthCityAdapter(DataGeneratorAdapter):
 
         if num_to_generate is None: num_to_generate = len(df_train)
         df_syn = syn_model.generate(count=num_to_generate).dataframe()
-        return df_syn
+
+        ## Sometimes the model does not generate enough samples (i.e., small categorical subsets have duplicates removed)
+        if len(df_syn) < num_to_generate:
+            df_mis = syn_model.generate(count=num_to_generate-len(df_syn)).dataframe()
+            df_syn = pd.concat([df_syn, df_mis], ignore_index=True)
+
+        if len(df_syn) < num_to_generate:
+            print(f"Warning: {num_to_generate-len(df_syn)} missing samples. Re-sampling to fill.")
+            df_mis = df_syn.sample(n=num_to_generate-len(df_syn), replace=True)
+            df_syn = pd.concat([df_syn, df_mis], ignore_index=True)
+
+        return df_syn[:num_to_generate]
 
 class SynthPopAdapter(DataGeneratorAdapter):
     def generate(self, train_data: str | DataFrame, num_to_generate: int = None, id: int = 0) -> DataFrame:

@@ -96,6 +96,7 @@ class UsingJoiningValidator(JoinStrategy):
     def __init__(self, join_validator_model: JoiningValidator,
                  patience: int = 1, 
                  max_iter: int = 100,
+                 max_size: int = 1e6
                  ) -> None:
         """ Joins the dataframes randomly, in an iterative process 
         where bad joins are removed by a validator model.
@@ -104,10 +105,12 @@ class UsingJoiningValidator(JoinStrategy):
             join_validator_model (JoiningValidator): The model to use for validating joins.
             patience (int): Threshold number of items to add in each iteration before stopping.
             max_iter (int): The maximum number of iterations to perform.
+            max_size (int): The maximum size of the joined dataframe.
         """
         self.join_validator = join_validator_model
         self.patience = patience
         self.max_iter = max_iter
+        self.max_size = max_size
         pass
 
     def join(self, data: Dict[str, DataFrame]) -> DataFrame:
@@ -138,8 +141,6 @@ class UsingJoiningValidator(JoinStrategy):
             True
             
         """
-        import numpy as np
-
         while_index = 0
         df_good_joins = None
         while while_index < self.max_iter and len(data[list(data.keys())[0]]) > 0:
@@ -162,6 +163,8 @@ class UsingJoiningValidator(JoinStrategy):
 
             while_index += 1
             if len(df_attempt_good_joins) < self.patience:
+                break
+            if len(df_good_joins) > self.max_size:
                 break
         return df_good_joins
 

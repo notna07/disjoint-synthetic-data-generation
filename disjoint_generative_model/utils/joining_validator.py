@@ -137,7 +137,7 @@ class JoiningValidator:
             >>> isinstance(result, pd.DataFrame)
             True
         """
-        pred = self.classifier_model.predict(query_data)
+        pred = self.classifier_model.predict(query_data.values)
         if self.verbose: print(f'Predicted good joins fraction: {(pred==1).mean()}')
         return query_data.loc[pred==1]
 

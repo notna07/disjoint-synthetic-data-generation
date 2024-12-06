@@ -22,13 +22,16 @@ class DisjointGenerativeModels:
         training_data (Dict[str, DataFrame]): The training data, split into different splits.
         generative_models (List[str]): The generative models to use.
         used_splits (Dict[str, List[str]]): The divisions of columns actually used.
+        worker_id (int): The worker id for parallel runs.
         synthetic_data (DataFrame): The synthetic data (once generated).
+        join_multiplier (int): The multiplier for the number of samples to generate (for using join validator).
     """
     def __init__(self,
                  training_data,
                  generative_models: List[str] | Dict[str, List[str]],
                  prepared_splits: Dict[str, List[str]] = None,
-                 joining_strategy: JoinStrategy = None
+                 joining_strategy: JoinStrategy = None,
+                 worker_id: int = 0,
                  ):
         """ Initialize the DisjointGenerativeModels class.
 
@@ -37,12 +40,16 @@ class DisjointGenerativeModels:
             generative_models (List[str] | Dict[str, List[str]]): The generative models to use (can add column name lists).
             prepared_splits (Dict[str, List[str]]): Predefined splits of columns, if none use random splits for each model.
             joining_strategy (JoinStrategy): The strategy for joining dataframes, if none defaults to concatenation.
+            worker_id (int): Index for not overwriting files in parallel runs.
         """
         self.original_data = training_data
         self.generative_models = generative_models
         self.used_splits = prepared_splits
 
+        self.worker_id = worker_id
+
         self._strategy = joining_strategy
+        self.join_multiplier = 3
         pass
     
     @property
@@ -66,8 +73,12 @@ class DisjointGenerativeModels:
         self.training_data = self.dm.encoded_dataset_dict
         self.used_splits = self.dm.column_splits
 
+        if self.num_samples is None:
+            self.num_samples = len(self.original_data)
+
         if hasattr(self._strategy, 'join_validator'):
             self._strategy.join_validator.fit_classifier(self.training_data)
+            self.num_samples = int(self.join_multiplier*self.num_samples)   # multiplier of three seems to do well enough
 
         if isinstance(self.generative_models, Dict):     # get model names from dict to list
             self.generative_models = list(self.generative_models.keys())
@@ -79,8 +90,11 @@ class DisjointGenerativeModels:
         # TODO: Calculate some other metric
         pass
 
-    def fit_generate(self):
+    def fit_generate(self, num_samples: int = None) -> DataFrame:
         """ Fit the generative models to the training data and generate synthetic data.
+        
+        Args:
+            num_samples (int): The number of samples to generate (defaults to len(train_data)).
 
         Returns:
             DataFrame: The synthetic data.
@@ -92,10 +106,11 @@ class DisjointGenerativeModels:
             >>> dgm.fit_generate() # doctest: +ELLIPSIS
             -etc-
         """
+        self.num_samples = num_samples
         self._setup()
 
         syn_dfs_dict = {}
-        res = Parallel(n_jobs=-1)(delayed(generate_synthetic_data)(train_data, model, idx) for idx, model, train_data in zip(range(len(self.generative_models)),self.generative_models, self.training_data.values()))
+        res = Parallel(n_jobs=-1)(delayed(generate_synthetic_data)(train_data, model, idx+self.worker_id, num_to_generate=self.num_samples) for idx, model, train_data in zip(range(len(self.generative_models)),self.generative_models, self.training_data.values()))
         syn_dfs_dict = {split_name: df_syn for split_name, df_syn in zip(self.training_data.keys(), res)}
 
         synthetic_data = self.conduct_joining(syn_dfs_dict)
