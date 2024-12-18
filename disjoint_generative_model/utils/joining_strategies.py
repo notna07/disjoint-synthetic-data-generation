@@ -166,6 +166,8 @@ class UsingJoiningValidator(JoinStrategy):
                 break
             if len(df_good_joins) > self.max_size:
                 break
+
+        print(f"Final size of synthetic data: {len(df_good_joins)}")
         return df_good_joins
 
 if __name__ == "__main__":

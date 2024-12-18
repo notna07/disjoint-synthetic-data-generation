@@ -72,7 +72,7 @@ class SynthCityAdapter(DataGeneratorAdapter):
         else:
             df_train = train_data
 
-        syn_model = Plugins().get(self.gen_model)
+        syn_model = Plugins().get(self.gen_model, random_state = id)
         syn_model.fit(df_train)
 
         if num_to_generate is None: num_to_generate = len(df_train)
@@ -184,7 +184,8 @@ class DataSynthesizerAdapter(DataGeneratorAdapter):
         describer.describe_dataset_in_correlated_attribute_mode(dataset_file = train_data_name +'.csv', 
                                                                 epsilon=0, 
                                                                 k=2,
-                                                                attribute_to_is_categorical={})
+                                                                attribute_to_is_categorical={},
+                                                                seed = id)
         describer.save_dataset_description_to_file(description_file)
 
         generator = DataGenerator()

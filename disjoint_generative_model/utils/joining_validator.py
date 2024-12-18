@@ -54,6 +54,7 @@ class JoiningValidator:
     def __init__(self, 
                  classifier_model_base: object,
                  verbose = True,
+                 threshold = 0.5,
                  ):
         
         # check that the classifier model is a valid model
@@ -61,9 +62,11 @@ class JoiningValidator:
             raise ValueError('The classifier model must have a fit method')
         if not hasattr(classifier_model_base, 'predict'):
             raise ValueError('The classifier model must have a predict method')
+        if not hasattr(classifier_model_base, 'predict_proba'):
+            raise ValueError('The classifier model must have a predict_proba method')
 
         self.classifier_model = classifier_model_base
-
+        self.threshold = threshold
         self.verbose = verbose
         pass
                              
@@ -137,7 +140,9 @@ class JoiningValidator:
             >>> isinstance(result, pd.DataFrame)
             True
         """
-        pred = self.classifier_model.predict(query_data.values)
+        pred = self.classifier_model.predict_proba(query_data.values)[:,1]
+        # pred = self.classifier_model.predict(query_data.values)
+        pred = (pred >= self.threshold).astype(int)
         if self.verbose: print(f'Predicted good joins fraction: {(pred==1).mean()}')
         return query_data.loc[pred==1]
 
