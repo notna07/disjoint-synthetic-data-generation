@@ -191,7 +191,7 @@ class DataSynthesizerAdapter(DataGeneratorAdapter):
         generator = DataGenerator()
 
         if num_to_generate is None: num_to_generate = len(df_train)
-        generator.generate_dataset_in_correlated_attribute_mode(num_to_generate, description_file)
+        generator.generate_dataset_in_correlated_attribute_mode(num_to_generate, description_file, seed=id)
 
         df_syn = generator.synthetic_dataset
 

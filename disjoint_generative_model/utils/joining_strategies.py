@@ -90,10 +90,10 @@ class RandomJoining(JoinStrategy):
             data[key] = data[key].sample(frac=1, random_state = self.random_state)
         return pd.concat(data.values(), axis=1).reset_index(drop=True)
 
-from .joining_validator import JoiningValidator
+from disjoint_generative_model.utils.joining_validator import JoiningValidator
 class UsingJoiningValidator(JoinStrategy):
     """ Concrete Strategy for joining dataframes using a JoiningValidator model."""
-    def __init__(self, join_validator_model: JoiningValidator,
+    def __init__(self, join_validator_model: JoiningValidator = JoiningValidator(threshold=0.5),
                  patience: int = 1, 
                  max_iter: int = 100,
                  max_size: int = 1e6
@@ -137,6 +137,7 @@ class UsingJoiningValidator(JoinStrategy):
             ...                             )
             >>> strategy = UsingJoiningValidator(validator)
             >>> result = strategy.join(dict_dfs)
+            Final size of synthetic data: 0
             >>> isinstance(result, pd.DataFrame)
             True
             

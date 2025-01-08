@@ -9,6 +9,7 @@ from typing import Dict
 from pandas import DataFrame
 
 from sklearn.model_selection import StratifiedKFold
+from sklearn.ensemble import RandomForestClassifier
 
 def _setup_training_data(dictionary_of_data_chunks: Dict[str, DataFrame],
                          num_batches_of_bad_joins: int = 2,
@@ -52,9 +53,9 @@ def _setup_training_data(dictionary_of_data_chunks: Dict[str, DataFrame],
 
 class JoiningValidator:
     def __init__(self, 
-                 classifier_model_base: object,
-                 verbose = True,
+                 classifier_model_base: object = RandomForestClassifier(n_estimators=100),
                  threshold = 0.5,
+                 verbose = True,
                  ):
         
         # check that the classifier model is a valid model
