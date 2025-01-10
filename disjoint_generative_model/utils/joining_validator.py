@@ -164,11 +164,11 @@ class JoiningValidator:
         if self.verbose: print(f'Predicted good joins fraction: {(pred==1).mean()}')
         return query_data.loc[pred==1]
 
-class JoiningValidatorOutlier:
+class JoiningValidatorOneClass:
     """Class for learning and validating joints between records using a one-class classifier model.
 
     Attributes:
-        outlier_model (object): One class classifier model to use.
+        one_class (object): One class classifier model to use.
         threshold (float): The threshold for the classifier.
         verbose (bool): Whether to print information.
     
@@ -177,20 +177,20 @@ class JoiningValidatorOutlier:
         validate: Validate the given DataFrame using the trained model.
     """
     def __init__(self, 
-                 outlier_model: object = IsolationForest(n_estimators=100),
+                 one_class: object = IsolationForest(n_estimators=100),
                  threshold = -0.5,
                  verbose = True,
                  ):
         
         # check that the classifier model is a valid model
-        if not hasattr(outlier_model, 'fit'):
-            raise ValueError('The outlier model must have a fit method')
-        if not hasattr(outlier_model, 'predict'):
-            raise ValueError('The outlier model must have a predict method')
-        if not hasattr(outlier_model, 'score_samples'):
-            raise ValueError('The outlier model must have a score_samples method')
+        if not hasattr(one_class, 'fit'):
+            raise ValueError('The one-class model must have a fit method')
+        if not hasattr(one_class, 'predict'):
+            raise ValueError('The one-class model must have a predict method')
+        if not hasattr(one_class, 'score_samples'):
+            raise ValueError('The one-class model must have a score_samples method')
 
-        self.outlier_model = outlier_model
+        self.one_class_model = one_class
         self.threshold = threshold
         self.verbose = verbose
         pass
@@ -206,7 +206,7 @@ class JoiningValidatorOutlier:
             >>> import numpy as np
             >>> import pandas as pd
             >>> dict_dfs = {'df1': pd.DataFrame({'A': [1, 2, 3, 4], 'B': [1, 2, 4, 4]}), 'df2': pd.DataFrame({'C': [2, 4, 6, 8], 'D': [2, 4, 8, 8]})}
-            >>> validator = JoiningValidatorOutlier()
+            >>> validator = JoiningValidatorOneClass()
             >>> validator.fit_classifier(dict_dfs, number_of_k_fold=2, random_state=42)
             -etc-
             Final model trained!
@@ -222,12 +222,12 @@ class JoiningValidatorOutlier:
         for train_index, test_index in kf.split(df_join_train[train_labels==1]):
             X_train, X_test_inliers = df_join_train.iloc[train_index], df_join_train.iloc[test_index]
             X_test_outliers = df_join_train[train_labels==-1].reset_index(drop=True).iloc[test_index]
-            self.outlier_model.fit(X_train)
+            self.one_class_model.fit(X_train)
 
             X_test = pd.concat([X_test_inliers, X_test_outliers], axis=0)
 
             y_test = np.array([1]*len(X_test_inliers)+[-1]*len(X_test_outliers))
-            y_pred = self.outlier_model.predict(X_test)
+            y_pred = self.one_class_model.predict(X_test)
 
             score = f1_score(y_test, y_pred, pos_label=-1)
             accuracies.append(score)
@@ -236,7 +236,7 @@ class JoiningValidatorOutlier:
             print(f'Bad joins found F1: {accuracies}')
             print(f'Mean F1: {sum(accuracies) / len(accuracies)}')
 
-        self.classifier_model = self.outlier_model.fit(df_join_train[train_labels==1])
+        self.classifier_model = self.one_class_model.fit(df_join_train[train_labels==1])
 
         if self.verbose: print('Final model trained!')
         pass
@@ -255,14 +255,14 @@ class JoiningValidatorOutlier:
             >>> import pandas as pd
             >>> np.random.seed(9)
             >>> df_train = pd.DataFrame(np.random.rand(100, 5))
-            >>> validator = JoiningValidatorOutlier(IsolationForest().fit(df_train))
+            >>> validator = JoiningValidatorOneClass(IsolationForest().fit(df_train))
             >>> query_data = pd.DataFrame(np.random.rand(10, 5))
             >>> result = validator.validate(query_data)
             Predicted good joins fraction: 0.3
             >>> isinstance(result, pd.DataFrame)
             True
         """
-        pred = self.outlier_model.score_samples(query_data.values)
+        pred = self.one_class_model.score_samples(query_data.values)
         pred = (pred >= self.threshold).astype(int)
         if self.verbose: print(f'Predicted good joins fraction: {(pred==1).mean()}')
         return query_data.loc[pred==1]
