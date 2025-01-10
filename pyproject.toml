@@ -3,15 +3,15 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "disjoint-gms"
+name = "disjointgms"
 version = "0.1.0"
 authors = [{name="Anton D. Lautrup"}]
 dependencies = [
     "numpy",
     "pandas",
-    "scipy ~= 1.10.1",
+    "scipy >= 1.10.1",
     "scikit-learn >= 1.2",
-    "syntheval >= 1.5.1",
+    "syntheval >= 1.6.0",
     "synthcity >= 0.2.11",
     "DataSynthesizer ~= 0.1.13",
     "pytest-doctest-ellipsis-markers",
