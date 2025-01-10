@@ -24,8 +24,13 @@ def _cleanup_files(file_names: List[str]) -> None:
     pass
 
 class DataGeneratorAdapter(ABC):
+    """ Abstract class for data generator adapters.
+
+    Required Methods:
+        generate(train_data_name: str | DataFrame, num_to_generate: int = None, id: int = 0) -> DataFrame: Generate synthetic data.
+    """
     @abstractmethod
-    def generate(self, train_data_name: str, num_to_generate: int = None, id: int = 0) -> DataFrame:
+    def generate(self, train_data_name: str | DataFrame, num_to_generate: int = None, id: int = 0) -> DataFrame:
         """ Generate synthetic data based on the training data.
 
         Args:

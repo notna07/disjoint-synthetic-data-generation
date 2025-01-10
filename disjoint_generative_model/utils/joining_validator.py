@@ -8,12 +8,17 @@ import pandas as pd
 from typing import Dict
 from pandas import DataFrame
 
+from sklearn.metrics import f1_score
+
+from sklearn.model_selection import KFold
 from sklearn.model_selection import StratifiedKFold
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import IsolationForest
 
 def _setup_training_data(dictionary_of_data_chunks: Dict[str, DataFrame],
                          num_batches_of_bad_joins: int = 2,
                          random_state: int =  None,
+                         negative_class: int = 0,
                          ) -> tuple[DataFrame, list]:
     """Prepare the training data for the classifier
     
@@ -40,11 +45,12 @@ def _setup_training_data(dictionary_of_data_chunks: Dict[str, DataFrame],
     for _, dataset_chunk in dictionary_of_data_chunks.items():
         correct_joins.append(dataset_chunk)
         incorrect_joins.append(dataset_chunk.sample(frac=num_batches_of_bad_joins, random_state=random_state, replace=True).reset_index(drop=True))
+        if random_state is not None: random_state += 1
 
     correct_joins = pd.concat(correct_joins, axis=1, ignore_index=True)
     incorrect_joins = pd.concat(incorrect_joins, axis=1, ignore_index=True)
 
-    train_labels = [1]*len(correct_joins)+[0]*len(incorrect_joins)
+    train_labels = [1]*len(correct_joins)+[negative_class]*len(incorrect_joins)
 
     df_join_train = pd.concat([correct_joins, incorrect_joins], axis=0).reset_index(drop=True)
 
@@ -52,6 +58,17 @@ def _setup_training_data(dictionary_of_data_chunks: Dict[str, DataFrame],
 
 
 class JoiningValidator:
+    """Class for learning and validating joints between records using a classifier model.
+
+    Attributes:
+        classifier_model (object): The classifier model to use.
+        threshold (float): The threshold for the classifier.
+        verbose (bool): Whether to print information.
+    
+    Methods:
+        fit_classifier: Perform cross-validation training and train the final model.
+        validate: Validate the given DataFrame using the trained model.
+    """
     def __init__(self, 
                  classifier_model_base: object = RandomForestClassifier(n_estimators=100),
                  threshold = 0.5,
@@ -146,6 +163,110 @@ class JoiningValidator:
         pred = (pred >= self.threshold).astype(int)
         if self.verbose: print(f'Predicted good joins fraction: {(pred==1).mean()}')
         return query_data.loc[pred==1]
+
+class JoiningValidatorOutlier:
+    """Class for learning and validating joints between records using a one-class classifier model.
+
+    Attributes:
+        outlier_model (object): One class classifier model to use.
+        threshold (float): The threshold for the classifier.
+        verbose (bool): Whether to print information.
+    
+    Methods:
+        fit_classifier: Perform cross-validation training and train the final model.
+        validate: Validate the given DataFrame using the trained model.
+    """
+    def __init__(self, 
+                 outlier_model: object = IsolationForest(n_estimators=100),
+                 threshold = -0.5,
+                 verbose = True,
+                 ):
+        
+        # check that the classifier model is a valid model
+        if not hasattr(outlier_model, 'fit'):
+            raise ValueError('The outlier model must have a fit method')
+        if not hasattr(outlier_model, 'predict'):
+            raise ValueError('The outlier model must have a predict method')
+        if not hasattr(outlier_model, 'score_samples'):
+            raise ValueError('The outlier model must have a score_samples method')
+
+        self.outlier_model = outlier_model
+        self.threshold = threshold
+        self.verbose = verbose
+        pass
+
+    def fit_classifier(self,
+                       dictionary_of_data_chunks: Dict[str, DataFrame],
+                       number_of_k_fold: int = 5,
+                       random_state: int = None,
+                       ) -> None:
+        """ Train the outlier detection model using the given data.
+
+        Example:
+            >>> import numpy as np
+            >>> import pandas as pd
+            >>> dict_dfs = {'df1': pd.DataFrame({'A': [1, 2, 3, 4], 'B': [1, 2, 4, 4]}), 'df2': pd.DataFrame({'C': [2, 4, 6, 8], 'D': [2, 4, 8, 8]})}
+            >>> validator = JoiningValidatorOutlier()
+            >>> validator.fit_classifier(dict_dfs, number_of_k_fold=2, random_state=42)
+            -etc-
+            Final model trained!
+        """
+
+        df_join_train, train_labels = _setup_training_data(dictionary_of_data_chunks, 1, random_state, negative_class=-1)
+
+        train_labels = np.array(train_labels)
+
+        kf = KFold(n_splits=number_of_k_fold, shuffle=True, random_state=random_state)
+
+        accuracies = []
+        for train_index, test_index in kf.split(df_join_train[train_labels==1]):
+            X_train, X_test_inliers = df_join_train.iloc[train_index], df_join_train.iloc[test_index]
+            X_test_outliers = df_join_train[train_labels==-1].reset_index(drop=True).iloc[test_index]
+            self.outlier_model.fit(X_train)
+
+            X_test = pd.concat([X_test_inliers, X_test_outliers], axis=0)
+
+            y_test = np.array([1]*len(X_test_inliers)+[-1]*len(X_test_outliers))
+            y_pred = self.outlier_model.predict(X_test)
+
+            score = f1_score(y_test, y_pred, pos_label=-1)
+            accuracies.append(score)
+
+        if self.verbose:
+            print(f'Bad joins found F1: {accuracies}')
+            print(f'Mean F1: {sum(accuracies) / len(accuracies)}')
+
+        self.classifier_model = self.outlier_model.fit(df_join_train[train_labels==1])
+
+        if self.verbose: print('Final model trained!')
+        pass
+
+    def validate(self, query_data: DataFrame) -> DataFrame:
+        """ Validate the given DataFrame using the trained model.
+
+        Args:
+            df_attempt (DataFrame): The DataFrame to validate.
+
+        Returns:
+            DataFrame: The rows of df_attempt that are predicted to be good joins.
+
+        Example:
+            >>> import numpy as np
+            >>> import pandas as pd
+            >>> np.random.seed(9)
+            >>> df_train = pd.DataFrame(np.random.rand(100, 5))
+            >>> validator = JoiningValidatorOutlier(IsolationForest().fit(df_train))
+            >>> query_data = pd.DataFrame(np.random.rand(10, 5))
+            >>> result = validator.validate(query_data)
+            Predicted good joins fraction: 0.3
+            >>> isinstance(result, pd.DataFrame)
+            True
+        """
+        pred = self.outlier_model.score_samples(query_data.values)
+        pred = (pred >= self.threshold).astype(int)
+        if self.verbose: print(f'Predicted good joins fraction: {(pred==1).mean()}')
+        return query_data.loc[pred==1]
+
 
 if __name__ == "__main__":
     import doctest

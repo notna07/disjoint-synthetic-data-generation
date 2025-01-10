@@ -88,7 +88,11 @@ class DataManager:
         self.original_dataset = original_dataset
 
         if prepared_splits is not None:
-            self.column_splits = prepared_splits
+            if isinstance(list(prepared_splits.values())[0],list):
+                self.column_splits = prepared_splits
+            else:
+                self.column_splits = random_split_columns(original_dataset, {f'split{i}': split for i, split in enumerate(prepared_splits.values())}, random_state=random_state)
+                  
         else:
             self.column_splits = random_split_columns(original_dataset, {f'split{i}': 1 for i in range(num_random_splits)}, random_state=random_state)
         self.encoded_dataset_dict = self._setup_column_splits(self.column_splits)

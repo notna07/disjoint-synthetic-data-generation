@@ -2,6 +2,8 @@
 # Date: 18-11-2024
 # Author : Anton D. Lautrup
 
+import warnings
+
 import pandas as pd
 
 from pandas import DataFrame
@@ -13,6 +15,9 @@ class JoinStrategy(ABC):
     to all supported algorithms.
 
     The JoiningModule uses this interface to call the algorithm defined by concrete strategies.
+
+    Required Methods:
+        join(data: Dict[str, DataFrame]) -> DataFrame: Joins the dict of dataframes.
     """
 
     @abstractmethod
@@ -93,10 +98,10 @@ class RandomJoining(JoinStrategy):
 from disjoint_generative_model.utils.joining_validator import JoiningValidator
 class UsingJoiningValidator(JoinStrategy):
     """ Concrete Strategy for joining dataframes using a JoiningValidator model."""
-    def __init__(self, join_validator_model: JoiningValidator = JoiningValidator(threshold=0.5),
+    def __init__(self, join_validator_model: JoiningValidator = JoiningValidator(threshold=0.5, verbose=False),
                  patience: int = 1, 
                  max_iter: int = 100,
-                 max_size: int = 1e6
+                 max_size: int = int(1e6)
                  ) -> None:
         """ Joins the dataframes randomly, in an iterative process 
         where bad joins are removed by a validator model.
@@ -137,7 +142,6 @@ class UsingJoiningValidator(JoinStrategy):
             ...                             )
             >>> strategy = UsingJoiningValidator(validator)
             >>> result = strategy.join(dict_dfs)
-            Final size of synthetic data: 0
             >>> isinstance(result, pd.DataFrame)
             True
             
@@ -167,9 +171,80 @@ class UsingJoiningValidator(JoinStrategy):
                 break
             if len(df_good_joins) > self.max_size:
                 break
+        
+        if len(df_good_joins) <= self.max_size:
+            warnings.warn(f"Expected size not reached, outputting only {len(df_good_joins)} items!")
+        return df_good_joins[:self.max_size]
+    
+from disjoint_generative_model.utils.joining_validator import JoiningValidatorOutlier
+class UsingOneClass(JoinStrategy):
+    """ Concrete Strategy for joining dataframes using an outlier detection model."""
+    def __init__(self, 
+                 join_validator_model: JoiningValidatorOutlier = JoiningValidatorOutlier(threshold=-0.5, verbose=False),
+                 patience: int = 1, 
+                 max_iter: int = 50,
+                 max_size: int = int(1e6),
+                 threshold_decay: float = 0.01,
+                 ) -> None:
+        """ Joins the dataframes using a OneClass model.
 
-        print(f"Final size of synthetic data: {len(df_good_joins)}")
-        return df_good_joins
+        Args:
+            join_validator_model (JoiningValidatorOutlier): The model to use for validating joins.
+            patience (int): Threshold number of items to add in each iteration before stopping.
+            max_iter (int): The maximum number of iterations to perform.
+            max_size (int): The maximum size of the joined dataframe.
+            t_decay (float): The decay rate for the threshold parameter. 
+        """
+        self.join_validator = join_validator_model
+        self.patience = patience
+        self.max_iter = max_iter
+        self.max_size = max_size
+        self.threshold_decay = threshold_decay
+        pass
+
+    def join(self, data: Dict[str, DataFrame]) -> DataFrame:
+        """ Joins the dataframes.
+
+        Args:
+            data (Dict[str, DataFrame]): A dictionary of dataframes.
+
+        Returns:
+            DataFrame: The joined dataframe.
+
+        Example:
+            
+        """
+        while_index = 0
+        df_good_joins = None
+
+        while while_index < self.max_iter and len(data[list(data.keys())[0]]) > 0:
+            for key, _ in data.items():
+                data[key] = data[key].sample(frac=1).reset_index(drop=True)
+            df_attempt = pd.concat(data.values(), axis=1)
+
+            df_attempt_good_joins = self.join_validator.validate(df_attempt)
+
+            df_attempt_good_joins_idx = list(sorted(df_attempt_good_joins.index))
+
+            # remove the good joins from the data
+            for key, _  in data.items():
+                data[key].drop(df_attempt_good_joins_idx, axis=0, inplace=True)
+            
+            if df_good_joins is None:
+                df_good_joins = df_attempt_good_joins.reset_index(drop=True)
+            else:
+                df_good_joins = pd.concat([df_good_joins, df_attempt_good_joins], axis=0).reset_index(drop=True)
+
+            while_index += 1
+            if len(df_attempt_good_joins) < self.patience: # if we have too few good joins, we decrease the threshold
+                self.join_validator.threshold = self.join_validator.threshold - self.threshold_decay
+
+            if len(df_good_joins) > self.max_size:
+                break
+        
+        if len(df_good_joins) <= self.max_size:
+            warnings.warn(f"Expected size not reached, outputting only {len(df_good_joins)} items!")
+        return df_good_joins[:self.max_size]
 
 if __name__ == "__main__":
     import doctest

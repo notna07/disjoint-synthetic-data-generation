@@ -9,7 +9,7 @@ from typing import Dict, List
 from joblib import Parallel, delayed
 
 from .utils.dataset_manager import DataManager
-from .utils.joining_strategies import JoinStrategy, Concatenating
+from .utils.joining_strategies import JoinStrategy, Concatenating, UsingJoiningValidator
 
 from .utils.generative_model_adapters import generate_synthetic_data
 
@@ -30,7 +30,7 @@ class DisjointGenerativeModels:
                  training_data,
                  generative_models: List[str] | Dict[str, List[str]],
                  prepared_splits: Dict[str, List[str]] = None,
-                 joining_strategy: JoinStrategy = None,
+                 joining_strategy: JoinStrategy = UsingJoiningValidator(),
                  worker_id: int = 0,
                  ):
         """ Initialize the DisjointGenerativeModels class.
@@ -39,7 +39,7 @@ class DisjointGenerativeModels:
             training_data (DataFrame): The training data (before splitting).
             generative_models (List[str] | Dict[str, List[str]]): The generative models to use (can add column name lists).
             prepared_splits (Dict[str, List[str]]): Predefined splits of columns, if none use random splits for each model.
-            joining_strategy (JoinStrategy): The strategy for joining dataframes, if none defaults to concatenation.
+            joining_strategy (JoinStrategy): The strategy for joining dataframes, defaults to using joining validator.
             worker_id (int): Index for not overwriting files in parallel runs.
         """
         self.original_data = training_data
@@ -49,7 +49,7 @@ class DisjointGenerativeModels:
         self.worker_id = worker_id
 
         self._strategy = joining_strategy
-        self.join_multiplier = 3
+        self.join_multiplier = 6
         pass
     
     @property
@@ -78,6 +78,7 @@ class DisjointGenerativeModels:
 
         if hasattr(self._strategy, 'join_validator'):
             self._strategy.join_validator.fit_classifier(self.training_data)
+            self._strategy.max_size = int(self.num_samples)
             self.num_samples = int(self.join_multiplier*self.num_samples)   # multiplier of three seems to do well enough
 
         if isinstance(self.generative_models, Dict):     # get model names from dict to list
