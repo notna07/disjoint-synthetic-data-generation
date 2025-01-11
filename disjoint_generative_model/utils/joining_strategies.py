@@ -95,6 +95,8 @@ class RandomJoining(JoinStrategy):
             data[key] = data[key].sample(frac=1, random_state = self.random_state)
         return pd.concat(data.values(), axis=1).reset_index(drop=True)
 
+
+# TODO: merge with UsingOneClassValidator and implement standard behaviours
 from disjoint_generative_model.utils.joining_validator import JoiningValidator
 class UsingJoiningValidator(JoinStrategy):
     """ Concrete Strategy for joining dataframes using a JoiningValidator model."""
@@ -157,6 +159,8 @@ class UsingJoiningValidator(JoinStrategy):
         """
         while_index = 0
         df_good_joins = None
+
+        patience_counter = 0
         while while_index < self.max_iter and len(data[list(data.keys())[0]]) > 0:
             for key, _ in data.items():
                 data[key] = data[key].sample(frac=1).reset_index(drop=True)
