@@ -71,7 +71,6 @@ class JoiningValidator:
     """
     def __init__(self, 
                  classifier_model_base: object = RandomForestClassifier(n_estimators=100),
-                 threshold = 0.5,
                  verbose = True,
                  ):
         
@@ -84,10 +83,23 @@ class JoiningValidator:
             raise ValueError('The classifier model must have a predict_proba method')
 
         self.classifier_model = classifier_model_base
-        self.threshold = threshold
+        self.threshold = 0.5
+        self.auto_threshold_percentage = None
         self.verbose = verbose
         pass
-                             
+
+    def get_standard_behavior(self) -> Dict:
+        """ Get the standard parameters for the strategy. """
+        dict = {
+            "patience": 1,
+            "min_iter": 5,
+            "max_iter": 100,
+            "threshold": 0.5,
+            "threshold_decay": 0, 
+            'auto_threshold_percentage': None
+        }
+        return dict
+
     def fit_classifier(self,
                        dictionary_of_data_chunks: Dict[str, DataFrame],
                        number_of_stratified_k_fold: int = 5,
@@ -118,7 +130,7 @@ class JoiningValidator:
 
         skf = StratifiedKFold(n_splits=number_of_stratified_k_fold, shuffle=True, random_state=random_state)
         
-        accuracies = []
+        accuracies, thresholds = [], []
         for train_index, test_index in skf.split(df_join_train, train_labels):
             X_train, X_test = df_join_train.iloc[train_index], df_join_train.iloc[test_index]
             y_train, y_test = train_labels[train_index], train_labels[test_index]
@@ -130,7 +142,7 @@ class JoiningValidator:
         if self.verbose:
             print(f'Cross-validated accuracies: {accuracies}')
             print(f'Mean accuracy: {sum(accuracies) / len(accuracies)}')
-        
+
         self.classifier_model = self.classifier_model.fit(df_join_train, train_labels)
 
         if self.verbose: print('Final model trained!')
@@ -157,14 +169,17 @@ class JoiningValidator:
             Predicted good joins fraction: 0.9
             >>> isinstance(result, pd.DataFrame)
             True
-        """
+        """     
         pred = self.classifier_model.predict_proba(query_data.values)[:,1]
-        # pred = self.classifier_model.predict(query_data.values)
+        if self.threshold == "auto":
+            self.threshold = sorted(pred, reverse=True)[int(self.auto_threshold_percentage*len(query_data))]
+            print("Threshold auto-set to:", self.threshold)
+
         pred = (pred >= self.threshold).astype(int)
         if self.verbose: print(f'Predicted good joins fraction: {(pred==1).mean()}')
         return query_data.loc[pred==1]
 
-class JoiningValidatorOneClass:
+class OneClassValidator:
     """Class for learning and validating joints between records using a one-class classifier model.
 
     Attributes:
@@ -178,7 +193,6 @@ class JoiningValidatorOneClass:
     """
     def __init__(self, 
                  one_class: object = IsolationForest(n_estimators=100),
-                 threshold = -0.5,
                  verbose = True,
                  ):
         
@@ -191,9 +205,22 @@ class JoiningValidatorOneClass:
             raise ValueError('The one-class model must have a score_samples method')
 
         self.one_class_model = one_class
-        self.threshold = threshold
+        self.threshold = -0.5
+        self.auto_threshold_percentage = None
         self.verbose = verbose
         pass
+
+    def get_standard_behavior(self) -> Dict:
+        """ Get the standard parameters for the strategy. """
+        dict = {
+            "patience": 5,
+            "min_iter": 5,
+            "max_iter": 50,
+            "threshold":  "auto",
+            "threshold_decay":  0.01,
+            'auto_threshold_percentage': 0.1
+        }
+        return dict
 
     def fit_classifier(self,
                        dictionary_of_data_chunks: Dict[str, DataFrame],
@@ -206,7 +233,7 @@ class JoiningValidatorOneClass:
             >>> import numpy as np
             >>> import pandas as pd
             >>> dict_dfs = {'df1': pd.DataFrame({'A': [1, 2, 3, 4], 'B': [1, 2, 4, 4]}), 'df2': pd.DataFrame({'C': [2, 4, 6, 8], 'D': [2, 4, 8, 8]})}
-            >>> validator = JoiningValidatorOneClass()
+            >>> validator = OneClassValidator()
             >>> validator.fit_classifier(dict_dfs, number_of_k_fold=2, random_state=42)
             -etc-
             Final model trained!
@@ -255,7 +282,7 @@ class JoiningValidatorOneClass:
             >>> import pandas as pd
             >>> np.random.seed(9)
             >>> df_train = pd.DataFrame(np.random.rand(100, 5))
-            >>> validator = JoiningValidatorOneClass(IsolationForest().fit(df_train))
+            >>> validator = OneClassValidator(IsolationForest().fit(df_train))
             >>> query_data = pd.DataFrame(np.random.rand(10, 5))
             >>> result = validator.validate(query_data)
             Predicted good joins fraction: 0.3
@@ -263,6 +290,10 @@ class JoiningValidatorOneClass:
             True
         """
         pred = self.one_class_model.score_samples(query_data.values)
+        if self.threshold == "auto":
+            self.threshold = sorted(pred, reverse=True)[int(self.auto_threshold_percentage*len(query_data))]
+            print("Threshold auto-set to:", self.threshold)
+
         pred = (pred >= self.threshold).astype(int)
         if self.verbose: print(f'Predicted good joins fraction: {(pred==1).mean()}')
         return query_data.loc[pred==1]

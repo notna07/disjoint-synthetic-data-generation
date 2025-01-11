@@ -49,7 +49,7 @@ class DisjointGenerativeModels:
         self.worker_id = worker_id
 
         self._strategy = joining_strategy
-        self.join_multiplier = 6
+        self.join_multiplier = 3
         pass
     
     @property
