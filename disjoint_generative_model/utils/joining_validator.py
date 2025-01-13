@@ -13,7 +13,7 @@ from sklearn.metrics import f1_score
 from sklearn.model_selection import KFold
 from sklearn.model_selection import StratifiedKFold
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.ensemble import IsolationForest
+from sklearn.ensemble import OneClassSVM
 
 def _setup_training_data(dictionary_of_data_chunks: Dict[str, DataFrame],
                          num_batches_of_bad_joins: int = 2,
@@ -130,7 +130,7 @@ class JoiningValidator:
 
         skf = StratifiedKFold(n_splits=number_of_stratified_k_fold, shuffle=True, random_state=random_state)
         
-        accuracies, thresholds = [], []
+        accuracies = []
         for train_index, test_index in skf.split(df_join_train, train_labels):
             X_train, X_test = df_join_train.iloc[train_index], df_join_train.iloc[test_index]
             y_train, y_test = train_labels[train_index], train_labels[test_index]
@@ -192,7 +192,7 @@ class OneClassValidator:
         validate: Validate the given DataFrame using the trained model.
     """
     def __init__(self, 
-                 one_class: object = IsolationForest(n_estimators=100),
+                 one_class: object = OneClassSVM(),
                  verbose = True,
                  ):
         

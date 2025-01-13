@@ -101,9 +101,9 @@ def make_relative_derviation_histogram(datasets: List[str], models):
     # ax.set_title("Results for different metrics on datasets using mixed model, DP-GAN and Synthpop")
     
     # visualizing illustration
+    plt.savefig('experiments/results/figures/metrics_results_for_mixed_model.png', dpi=300, bbox_inches='tight')
+    plt.savefig('experiments/results/figures/metrics_results_for_mixed_model.pdf', dpi=300, bbox_inches='tight')
     plt.show()
-    plt.savefig(f'experiments/results/figures/metrics_results_for_mixed_model.png', dpi=300, bbox_inches='tight')
-    plt.savefig(f'experiments/results/figures/metrics_results_for_mixed_model.pdf', dpi=300, bbox_inches='tight')
     pass
 
 if __name__ == '__main__':
