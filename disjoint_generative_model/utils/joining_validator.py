@@ -13,7 +13,7 @@ from sklearn.metrics import f1_score
 from sklearn.model_selection import KFold
 from sklearn.model_selection import StratifiedKFold
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.ensemble import OneClassSVM
+from sklearn.svm import OneClassSVM
 
 def _setup_training_data(dictionary_of_data_chunks: Dict[str, DataFrame],
                          num_batches_of_bad_joins: int = 2,
