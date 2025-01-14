@@ -91,7 +91,7 @@ class JoiningValidator:
     def get_standard_behavior(self) -> Dict:
         """ Get the standard parameters for the strategy. """
         dict = {
-            "patience": 1,
+            "patience": 3,
             "min_iter": 5,
             "max_iter": 100,
             "threshold": 0.5,
@@ -132,11 +132,12 @@ class JoiningValidator:
         
         accuracies = []
         for train_index, test_index in skf.split(df_join_train, train_labels):
+            temp_model = self.classifier_model.copy()
             X_train, X_test = df_join_train.iloc[train_index], df_join_train.iloc[test_index]
             y_train, y_test = train_labels[train_index], train_labels[test_index]
             
-            self.classifier_model.fit(X_train, y_train)
-            y_pred = self.classifier_model.predict(X_test)
+            temp_model.fit(X_train, y_train)
+            y_pred = temp_model.predict(X_test)
             accuracies.append((y_pred.round() == y_test).mean())
 
         if self.verbose:
