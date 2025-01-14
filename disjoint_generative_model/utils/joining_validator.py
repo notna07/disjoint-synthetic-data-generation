@@ -5,6 +5,8 @@
 import numpy as np
 import pandas as pd
 
+import copy
+
 from typing import Dict
 from pandas import DataFrame
 
@@ -132,7 +134,7 @@ class JoiningValidator:
         
         accuracies = []
         for train_index, test_index in skf.split(df_join_train, train_labels):
-            temp_model = self.classifier_model.copy()
+            temp_model = copy.copy(self.classifier_model)
             X_train, X_test = df_join_train.iloc[train_index], df_join_train.iloc[test_index]
             y_train, y_test = train_labels[train_index], train_labels[test_index]
             
