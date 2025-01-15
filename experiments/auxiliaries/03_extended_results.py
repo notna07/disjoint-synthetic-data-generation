@@ -56,7 +56,7 @@ def worker(df_train: DataFrame, df_test: DataFrame, model: str, id: int, target_
             Rf = RandomForestClassifier(n_estimators=100)
             JS = UsingJoiningValidator(JoiningValidator(Rf, verbose=False), behaviour='adaptive')
 
-            dgms = DisjointGenerativeModels(df_train, gms, joining_strategy=JS)
+            dgms = DisjointGenerativeModels(df_train, gms, joining_strategy=JS, worker_id = np.random.randint(0, 100))
             dgms.join_multiplier = 4
 
             df_temp = dgms.fit_generate()[:len(df_train)]
