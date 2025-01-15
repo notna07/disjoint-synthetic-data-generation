@@ -13,7 +13,7 @@ import seaborn as sns
 from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
 
-rcp = {'font.size': 8, 'font.family': 'sans', "mathtext.fontset": "dejavuserif"}
+rcp = {'font.size': 9, 'font.family': 'sans', "mathtext.fontset": "dejavuserif"}
 plt.rcParams.update(**rcp)
 
 def _format_correctly(res_df: pd.DataFrame, dataset: str, metric: str):
