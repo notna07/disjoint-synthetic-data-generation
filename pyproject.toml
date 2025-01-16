@@ -15,10 +15,12 @@ dependencies = [
     "synthcity >= 0.2.11",
     "DataSynthesizer ~= 0.1.13",
     "pytest-doctest-ellipsis-markers",
+    "pyod",
+    "rpy2 >= 3.5",
 ]
 description = "Exploring the Effects of Disjoint Generation of Synthetic Tabular Data."
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",

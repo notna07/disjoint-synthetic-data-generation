@@ -12,10 +12,10 @@ from pandas import DataFrame
 
 from sklearn.metrics import f1_score
 
-from sklearn.model_selection import KFold
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, KFold, train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import OneClassSVM
+from pyod.models.iforest import IForest
 
 def _setup_training_data(dictionary_of_data_chunks: Dict[str, DataFrame],
                          num_batches_of_bad_joins: int = 2,
@@ -250,7 +250,7 @@ class OneClassValidator:
 
         accuracies = []
         for train_index, test_index in kf.split(df_join_train[train_labels==1]):
-            temp_oc = self.one_class_model
+            temp_oc = copy.copy(self.one_class_model)
             X_train, X_test_inliers = df_join_train.iloc[train_index], df_join_train.iloc[test_index]
             X_test_outliers = df_join_train[train_labels==-1].reset_index(drop=True).iloc[test_index]
             temp_oc.fit(X_train)
@@ -286,10 +286,10 @@ class OneClassValidator:
             >>> import pandas as pd
             >>> np.random.seed(9)
             >>> df_train = pd.DataFrame(np.random.rand(100, 5))
-            >>> validator = OneClassValidator(IsolationForest().fit(df_train))
+            >>> validator = OneClassValidator(OneClassSVM().fit(df_train))
             >>> query_data = pd.DataFrame(np.random.rand(10, 5))
             >>> result = validator.validate(query_data)
-            Predicted good joins fraction: 0.3
+            Predicted good joins fraction: 1.0
             >>> isinstance(result, pd.DataFrame)
             True
         """
@@ -362,7 +362,6 @@ class OutlierValidator:
             >>> dict_dfs = {'df1': pd.DataFrame({'A': [1, 2, 3, 4], 'B': [1, 2, 4, 4]}), 'df2': pd.DataFrame({'C': [2, 4, 6, 8], 'D': [2, 4, 8, 8]})}
             >>> validator = OutlierValidator()
             >>> validator.fit_classifier(dict_dfs, number_of_k_fold=2, random_state=42)
-            -etc-
             Final model trained!
         """
 
@@ -372,26 +371,27 @@ class OutlierValidator:
         df_join_train_outlier = df_join_train[train_labels==-1].sample(len(df_join_train[train_labels==-1]) // 6)        
 
         accuracies = []
-        for i in range(number_of_k_fold):
-            temp_od = self.outlier_detection_model
-            inlier_train, inlier_test = train_test_split(df_join_train_inlier, test_size=1/number_of_k_fold, random_state=random_state if random_state is None else random_state+i)
-            outlier_train, outlier_test = train_test_split(df_join_train_outlier, test_size=1/number_of_k_fold, random_state=random_state if random_state is None else random_state+i)
-            combined_train = pd.concat([inlier_train, outlier_train], ignore_index=True)
-            inlier_train_labels = pd.DataFrame([0] * len(inlier_train), columns=['label'])
-            outlier_train_labels = pd.DataFrame([1] * len(outlier_train), columns=['label'])
-            combined_train_labels = pd.concat([inlier_train_labels, outlier_train_labels], ignore_index=True)
-            combined_test = pd.concat([inlier_test, outlier_test], ignore_index=True)
-            inlier_test_labels = pd.DataFrame([0] * len(inlier_test), columns=['label'])
-            outlier_test_labels = pd.DataFrame([1] * len(outlier_test), columns=['label'])
-            combined_test_labels = pd.concat([inlier_test_labels, outlier_test_labels], ignore_index=True)
-            temp_od.fit(combined_train)
-            y_pred = -temp_od.predict(combined_test) #multiply by -1 to map the scores from [inlier, outlier] => [0, 1] to [outlier, inlier] => [-1, 0] for consistency with different framework behaviors. 
-            score = f1_score(combined_test_labels, y_pred)
-            accuracies.append(score)
+        if len(df_join_train_outlier) != 1:
+            for i in range(number_of_k_fold):
+                temp_od = self.outlier_detection_model
+                inlier_train, inlier_test = train_test_split(df_join_train_inlier, test_size=1/number_of_k_fold, random_state=random_state if random_state is None else random_state+i)
+                outlier_train, outlier_test = train_test_split(df_join_train_outlier, test_size=1/number_of_k_fold, random_state=random_state if random_state is None else random_state+i)
+                combined_train = pd.concat([inlier_train, outlier_train], ignore_index=True)
+                inlier_train_labels = pd.DataFrame([0] * len(inlier_train), columns=['label'])
+                outlier_train_labels = pd.DataFrame([1] * len(outlier_train), columns=['label'])
+                combined_train_labels = pd.concat([inlier_train_labels, outlier_train_labels], ignore_index=True)
+                combined_test = pd.concat([inlier_test, outlier_test], ignore_index=True)
+                inlier_test_labels = pd.DataFrame([0] * len(inlier_test), columns=['label'])
+                outlier_test_labels = pd.DataFrame([1] * len(outlier_test), columns=['label'])
+                combined_test_labels = pd.concat([inlier_test_labels, outlier_test_labels], ignore_index=True)
+                temp_od.fit(combined_train)
+                y_pred = -temp_od.predict(combined_test) #multiply by -1 to map the scores from [inlier, outlier] => [0, 1] to [outlier, inlier] => [-1, 0] for consistency with different framework behaviors. 
+                score = f1_score(combined_test_labels, y_pred)
+                accuracies.append(score)
 
-        if self.verbose:
-            print(f'F1-Score (Good Joins): {accuracies}')
-            print(f'Mean F1: {sum(accuracies) / len(accuracies)}')
+            if self.verbose:
+                print(f'F1-Score (Good Joins): {accuracies}')
+                print(f'Mean F1: {sum(accuracies) / len(accuracies)}')
 
         self.classifier_model = self.outlier_detection_model.fit(pd.concat([df_join_train_inlier, df_join_train_outlier], ignore_index=True))
 
@@ -412,10 +412,10 @@ class OutlierValidator:
             >>> import pandas as pd
             >>> np.random.seed(9)
             >>> df_train = pd.DataFrame(np.random.rand(100, 5))
-            >>> validator = OutlierValidator(IForest())
+            >>> validator = OutlierValidator(IForest().fit(df_train))
             >>> query_data = pd.DataFrame(np.random.rand(10, 5))
             >>> result = validator.validate(query_data)
-            Predicted good joins fraction: 0.3
+            Predicted good joins fraction: 1.0
             >>> isinstance(result, pd.DataFrame)
             True
         """

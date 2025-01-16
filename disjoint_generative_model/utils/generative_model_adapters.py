@@ -96,8 +96,9 @@ class SynthCityAdapter(DataGeneratorAdapter):
         return df_syn[:num_to_generate]
 
 class SynthPopAdapter(DataGeneratorAdapter):
-    def generate(self, train_data: str | DataFrame, num_to_generate: int = None, id: int = 0) -> DataFrame:
-        """ Generate synthetic data using SynthPop.
+    def generate(self, train_data: str | DataFrame, num_to_generate: int = None, id: int = None) -> DataFrame:
+        """ Generate synthetic data using SynthPop with rpy2.
+        If it is not created set the PATH environment variable 'R_HOME' to an R installation like C:\Program Files\R\R-4.4.0 for this to work.
 
         Reference:
             Nowok, B., Raab, G. M., & Dibben, C. (2016). synthpop: Bespoke Creation of Synthetic Data in R. 
@@ -112,42 +113,47 @@ class SynthPopAdapter(DataGeneratorAdapter):
 
         Example:
             >>> adapter = SynthPopAdapter()
-            >>> df_syn = adapter.generate('tests/dummy_train')
+            >>> df_syn = adapter.generate('tests/dummy_train') # doctest: +ELLIPSIS
+            -etc-
             >>> isinstance(df_syn, pd.DataFrame)
             True
         """
-        import subprocess
+        # import subprocess
+        import rpy2.robjects.packages as rpackages
+        utils = rpackages.importr('utils')
+        utils.chooseCRANmirror(ind=1) # select the first mirror in the list
+
+        # Install the required R package
+        if not rpackages.isinstalled('synthpop'):
+            utils.install_packages('synthpop')
+
+        synthpop = rpackages.importr('synthpop')
 
         if isinstance(train_data, str):
-            train_data_name = train_data
+            df_train = _load_data(train_data)
         else:
-            train_data_name = f'synthpop_temp_{id}'
-            _write_data(train_data, train_data_name + '.csv')
+            df_train = train_data
 
-        df_train = _load_data(train_data_name)
+        import rpy2.robjects as ro
+        from rpy2.robjects import pandas2ri
 
-        info_dir = 'synthesis_info_' + train_data_name.split('/')[0]
-        if not os.path.exists(info_dir):
-            os.makedirs(info_dir)
+        # Convert the training data to an R DataFrame
+        with (ro.default_converter + pandas2ri.converter).context():
+            r_df_train = ro.conversion.get_conversion().py2rpy(df_train)
 
-        command = [
-                    "Rscript",
-                    "disjoint_generative_model/utils/subprocess/synthpop_subprocess.R",
-                    train_data_name +".csv",
-                    train_data_name + "_synthpop",
-                    str(num_to_generate) if num_to_generate is not None else str(len(df_train)),
-                ]
-        subprocess.run(command, check=True)
+        mysyn = synthpop.syn(r_df_train,
+                     method = "cart",
+                     k = ro.r(f"{num_to_generate}") if num_to_generate is not None else ro.r(f"{len(df_train)}"),
+                     minnumlevels = ro.r("3"),
+                     print_flag = ro.r("FALSE"),
+                     seed = ro.r(f"{id}") if id is not None else "sample",
+                     )
 
-        df_syn = pd.read_csv(train_data_name + '_synthpop.csv')
-        df_syn.columns = [col for col in df_train.columns]
+        # Convert the synthetic data to a pandas DataFrame
+        with (ro.default_converter + pandas2ri.converter).context():
+            df_syn = ro.conversion.get_conversion().rpy2py(mysyn.rx2('syn'))
 
-        _cleanup_files(['synthesis_info_' + train_data_name + '_synthpop.txt', 
-                        train_data_name + '_synthpop.csv', 
-                        f'synthpop_temp_{id}.csv'])
-
-        os.removedirs(info_dir)
-        return df_syn
+        return df_syn.reset_index(drop=True)
 
 class DataSynthesizerAdapter(DataGeneratorAdapter):
     def generate(self, train_data: str | DataFrame, num_to_generate: int = None, id: int = 0) -> DataFrame:
@@ -224,6 +230,7 @@ def generate_synthetic_data(train_data: DataFrame | str, gen_model: str, id: int
 
     Example:
         >>> df_syn = generate_synthetic_data('tests/dummy_train', 'synthpop')
+        -etc-
         >>> isinstance(df_syn, pd.DataFrame)
         True
     """
