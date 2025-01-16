@@ -1,3 +1,5 @@
+[![Doctests](https://github.com/notna07/disjoint-synthetic-data-generation/actions/workflows/doctests.yml/badge.svg)](https://github.com/notna07/disjoint-synthetic-data-generation/actions/workflows/doctests.yml)
+
 # Disjoint Generative Models 
 
 Disjoint Generative Models (DGMs) is a framework for generating synthetic data by distributing the generation of different attributes to different generative models. This has the benefit of being able to choose the ``correct tool for the correct job'' and infers increased privacy by not having a single model that has access to all the data.
