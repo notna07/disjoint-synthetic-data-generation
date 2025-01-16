@@ -11,7 +11,7 @@ To install the library, run the following command:
 ```bash
 pip install 
 ```
-One of the generative model backends "synthpop" requires an R installation on the system. 
+One of the generative model backends "synthpop" requires the R langauge on the system. Access is handled through ```rpy2``` which is installed as a dependency. Remember to check that the environment variable ```R_HOME``` is setup correctly to an installation like ```C:\Program Files\R\R-4.4.0``` for this to work.
 
 ## Useage Examples (Experiments in the Paper)
  
@@ -27,4 +27,3 @@ Below is codebooks that can be used to replicate the results shown in the paper.
 - [ ] Add more generative model backends
 - [ ] Add more joining strategies
 - [ ] Add more experiments
-- [ ] Use rpy2 to call R functions from Python. R installation required for synthpop to work!
