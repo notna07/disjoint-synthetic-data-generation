@@ -250,23 +250,24 @@ class OneClassValidator:
 
         accuracies = []
         for train_index, test_index in kf.split(df_join_train[train_labels==1]):
+            temp_oc = self.one_class_model
             X_train, X_test_inliers = df_join_train.iloc[train_index], df_join_train.iloc[test_index]
             X_test_outliers = df_join_train[train_labels==-1].reset_index(drop=True).iloc[test_index]
-            self.one_class_model.fit(X_train)
+            temp_oc.fit(X_train)
 
             X_test = pd.concat([X_test_inliers, X_test_outliers], axis=0)
 
             y_test = np.array([1]*len(X_test_inliers)+[-1]*len(X_test_outliers))
-            y_pred = self.one_class_model.predict(X_test)
+            y_pred = temp_oc.predict(X_test)
 
-            score = f1_score(y_test, y_pred, pos_label=-1)
+            score = f1_score(y_test, y_pred)
             accuracies.append(score)
 
         if self.verbose:
-            print(f'Bad joins found F1: {accuracies}')
+            print(f'F1-Score (Good Joins): {accuracies}')
             print(f'Mean F1: {sum(accuracies) / len(accuracies)}')
 
-        self.classifier_model = self.one_class_model.fit(df_join_train[train_labels==1])
+        self.one_class_model.fit(df_join_train[train_labels==1])
 
         if self.verbose: print('Final model trained!')
         pass
