@@ -6,7 +6,7 @@ import os
 
 import pandas as pd
 
-from typing import List, Literal
+from typing import List
 from pandas import DataFrame
 from abc import ABC, abstractmethod
 
@@ -96,14 +96,6 @@ class SynthCityAdapter(DataGeneratorAdapter):
         return df_syn[:num_to_generate]
 
 class SynthPopAdapter(DataGeneratorAdapter):
-    """ Synthpop Adapter for generating synthetic data.
-
-    Attributes:
-        r_access (str): The method to access R (rpy2 or subprocess).
-    """
-    def __init__(self, r_access = 'subprocess'):
-        self.r_access = r_access
-
     def generate(self, train_data: str | DataFrame, num_to_generate: int = None, id: int = None) -> DataFrame:
         """ Generate synthetic data using SynthPop in R using subprocess.
         Be sure to check that R is installed and Rscript is a valid command in the terminal.
@@ -146,6 +138,7 @@ class SynthPopAdapter(DataGeneratorAdapter):
                     train_data_name +".csv",
                     train_data_name + "_synthpop",
                     str(num_to_generate) if num_to_generate is not None else str(len(df_train)),
+                    str(id) if id is not None else "",
                 ]
         subprocess.run(command, check=True)
 
@@ -282,8 +275,7 @@ def generate_synthetic_data(train_data: DataFrame | str, gen_model: str, id: int
         'ddpm': SynthCityAdapter(gen_model),
         'dpgan': SynthCityAdapter(gen_model),
         'privbayes': SynthCityAdapter(gen_model),
-        # 'synthpop': SynthPopAdapter('rpy2'),
-        'synthpop': SynthPopAdapter('subprocess'),
+        'synthpop': SynthPopAdapter(),
         'datasynthesizer': DataSynthesizerAdapter(),
         'debug': DebugAdapter()
     }
