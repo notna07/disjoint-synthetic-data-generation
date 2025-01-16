@@ -303,6 +303,132 @@ class OneClassValidator:
         return query_data.loc[pred==1]
 
 
+class OutlierValidator:
+    """Class for learning and validating joints between records using an outlier detection model.
+
+    Attributes:
+        outlier_detector (object): Outlier detection model to use.
+        threshold (float): The threshold for the outlier detection model. Since PyOD is used, threshold decay is set to be negative.
+        flex (float): The flexiblity of the outlier detection model in range [0, 1]. Higher values indicate a more strict behavior.
+        verbose (bool): Whether to print information.
+    
+    Methods:
+        fit_classifier: Perform cross-validation training and train the final model.
+        validate: Validate the given DataFrame using the trained model.
+    """
+    def __init__(self, 
+                 outlier_detector: object = IForest(),
+                 verbose = True,
+                 ):
+        
+        # check that the classifier model is a valid model
+        if not hasattr(outlier_detector, 'fit'):
+            raise ValueError('The outlier detection model must have a fit method')
+        if not hasattr(outlier_detector, 'predict'):
+            raise ValueError('The outlier detection model must have a predict method')
+        if not hasattr(outlier_detector, 'decision_function'):
+            raise ValueError('The outlier detection model must have a decision_function method')
+
+        self.outlier_detection_model = outlier_detector
+        self.threshold = 0.5
+        self.auto_threshold_percentage = None
+        self.flex = 0.5
+        self.outlier_detection_model.contamination = self.flex / 2
+        self.verbose = verbose
+        pass
+
+    def get_standard_behavior(self) -> Dict:
+        """ Get the standard parameters for the strategy. """
+        dict = {
+            "patience": 5,
+            "min_iter": 5,
+            "max_iter": 50,
+            "threshold":  "auto",
+            "threshold_decay":  0.01,
+            'auto_threshold_percentage': 0.1
+        }
+        return dict
+
+    def fit_classifier(self,
+                       dictionary_of_data_chunks: Dict[str, DataFrame],
+                       number_of_k_fold: int = 5,
+                       random_state: int = None,
+                       ) -> None:
+        """ Train the outlier detection model using the given data.
+
+        Example:
+            >>> import numpy as np
+            >>> import pandas as pd
+            >>> dict_dfs = {'df1': pd.DataFrame({'A': [1, 2, 3, 4], 'B': [1, 2, 4, 4]}), 'df2': pd.DataFrame({'C': [2, 4, 6, 8], 'D': [2, 4, 8, 8]})}
+            >>> validator = OutlierValidator()
+            >>> validator.fit_classifier(dict_dfs, number_of_k_fold=2, random_state=42)
+            -etc-
+            Final model trained!
+        """
+
+        df_join_train, train_labels = _setup_training_data(dictionary_of_data_chunks, 2, random_state, negative_class=-1)  
+        train_labels = np.array(train_labels)
+        df_join_train_inlier = df_join_train[train_labels==1]
+        df_join_train_outlier = df_join_train[train_labels==-1].sample(len(df_join_train[train_labels==-1]) // 6)        
+
+        accuracies = []
+        for i in range(number_of_k_fold):
+            temp_od = self.outlier_detection_model
+            inlier_train, inlier_test = train_test_split(df_join_train_inlier, test_size=1/number_of_k_fold, random_state=random_state if random_state is None else random_state+i)
+            outlier_train, outlier_test = train_test_split(df_join_train_outlier, test_size=1/number_of_k_fold, random_state=random_state if random_state is None else random_state+i)
+            combined_train = pd.concat([inlier_train, outlier_train], ignore_index=True)
+            inlier_train_labels = pd.DataFrame([0] * len(inlier_train), columns=['label'])
+            outlier_train_labels = pd.DataFrame([1] * len(outlier_train), columns=['label'])
+            combined_train_labels = pd.concat([inlier_train_labels, outlier_train_labels], ignore_index=True)
+            combined_test = pd.concat([inlier_test, outlier_test], ignore_index=True)
+            inlier_test_labels = pd.DataFrame([0] * len(inlier_test), columns=['label'])
+            outlier_test_labels = pd.DataFrame([1] * len(outlier_test), columns=['label'])
+            combined_test_labels = pd.concat([inlier_test_labels, outlier_test_labels], ignore_index=True)
+            temp_od.fit(combined_train)
+            y_pred = -temp_od.predict(combined_test) #multiply by -1 to map the scores from [inlier, outlier] => [0, 1] to [outlier, inlier] => [-1, 0] for consistency with different framework behaviors. 
+            score = f1_score(combined_test_labels, y_pred)
+            accuracies.append(score)
+
+        if self.verbose:
+            print(f'F1-Score (Good Joins): {accuracies}')
+            print(f'Mean F1: {sum(accuracies) / len(accuracies)}')
+
+        self.classifier_model = self.outlier_detection_model.fit(pd.concat([df_join_train_inlier, df_join_train_outlier], ignore_index=True))
+
+        if self.verbose: print('Final model trained!')
+        pass
+
+    def validate(self, query_data: DataFrame) -> DataFrame:
+        """ Validate the given DataFrame using the trained model.
+
+        Args:
+            df_attempt (DataFrame): The DataFrame to validate.
+
+        Returns:
+            DataFrame: The rows of df_attempt that are predicted to be good joins.
+
+        Example:
+            >>> import numpy as np
+            >>> import pandas as pd
+            >>> np.random.seed(9)
+            >>> df_train = pd.DataFrame(np.random.rand(100, 5))
+            >>> validator = OutlierValidator(IForest())
+            >>> query_data = pd.DataFrame(np.random.rand(10, 5))
+            >>> result = validator.validate(query_data)
+            Predicted good joins fraction: 0.3
+            >>> isinstance(result, pd.DataFrame)
+            True
+        """
+        pred = -self.outlier_detection_model.decision_function(query_data.values) #multiply by -1 to map the scores from [inlier, outlier] => [0, 1] to [outlier, inlier] => [-1, 0] for consistency with different framework behaviors. 
+        if self.threshold == "auto":
+            self.threshold = sorted(pred, reverse=False)[int(self.auto_threshold_percentage*len(query_data))]
+            print("Threshold auto-set to:", self.threshold)
+
+        pred = (pred >= self.threshold).astype(int)
+        if self.verbose: print(f'Predicted good joins fraction: {(pred==0).mean()}')
+        return query_data.loc[pred==0]
+
+
 if __name__ == "__main__":
     import doctest
     doctest.ELLIPSIS_MARKER = '-etc-'
