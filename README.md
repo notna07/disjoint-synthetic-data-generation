@@ -13,7 +13,7 @@ To install the library, run the following command:
 ```bash
 pip install 
 ```
-One of the generative model backends "synthpop" requires the R langauge on the system. Access is handled through ```rpy2``` which is installed as a dependency. Remember to check that the environment variable ```R_HOME``` is setup correctly to an installation like ```C:\Program Files\R\R-4.4.0``` for this to work.
+One of the generative model backends "synthpop" requires a working R installation on the system. Access is handled through ```subprocess``` to run an ```Rscript``` command, so make sure that the Rscript command works in the terminal.
 
 ## Useage Examples (Experiments in the Paper)
  
@@ -25,6 +25,7 @@ Below is codebooks that can be used to replicate the results shown in the paper.
 
 
 # TODO
+- [ ] reconsider if we will be using rpy2 or not
 - [ ] Consider default options to make user interface simpler for common use cases
 - [ ] Add more generative model backends
 - [ ] Add more joining strategies
