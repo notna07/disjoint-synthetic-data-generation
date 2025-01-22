@@ -190,6 +190,14 @@ class SynthPopAdapter(DataGeneratorAdapter):
         #     return df_syn.reset_index(drop=True)
 
 class DataSynthesizerAdapter(DataGeneratorAdapter):
+    """ DataSynthesizer Adapter for generating synthetic data.
+
+    Attributes:
+        epsilon (float): The privacy parameter epsilon for differential privacy (0 is turned off).
+    """
+    def __init__(self, epsilon: float = 0):
+        self.epsilon = epsilon
+
     def generate(self, train_data: str | DataFrame, num_to_generate: int = None, id: int = 0) -> DataFrame:
         """ Generate synthetic data using DataSynthesizer.
 
@@ -277,6 +285,7 @@ def generate_synthetic_data(train_data: DataFrame | str, gen_model: str, id: int
         'privbayes': SynthCityAdapter(gen_model),
         'synthpop': SynthPopAdapter(),
         'datasynthesizer': DataSynthesizerAdapter(),
+        'datasynthesizer-dp': DataSynthesizerAdapter(epsilon=0.1),
         'debug': DebugAdapter()
     }
 

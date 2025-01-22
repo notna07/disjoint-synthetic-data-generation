@@ -96,9 +96,9 @@ class JoiningValidator:
             "patience": 3,
             "min_iter": 5,
             "max_iter": 100,
-            "threshold": 0.5,
+            "threshold": 'auto',
             "threshold_decay": 0, 
-            'auto_threshold_percentage': None
+            'auto_threshold_percentage': 0.1
         }
         return dict
 
@@ -386,7 +386,7 @@ class OutlierValidator:
                 combined_test_labels = pd.concat([inlier_test_labels, outlier_test_labels], ignore_index=True)
                 temp_od.fit(combined_train)
                 y_pred = -temp_od.predict(combined_test) #multiply by -1 to map the scores from [inlier, outlier] => [0, 1] to [outlier, inlier] => [-1, 0] for consistency with different framework behaviors. 
-                score = f1_score(combined_test_labels, y_pred)
+                score = f1_score(combined_test_labels, y_pred, average='macro')
                 accuracies.append(score)
 
             if self.verbose:

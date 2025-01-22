@@ -31,7 +31,8 @@ def random_split_columns(dataset: DataFrame, split_ratios: Dict[str, float], ran
     # Check if the split sizes are valid
     sum_diff = abs(sum(split_sizes.values()) - dataset.shape[1])
     if sum_diff != 0:
-        split_sizes[list(split_sizes.keys())[0]] += sum_diff
+        for i in range(sum_diff):
+            split_sizes[list(split_sizes.keys())[i]] += 1
         warnings.warn(f"Split sizes adjusted to {split_sizes}")
     
     # Randomly shuffle the columns
