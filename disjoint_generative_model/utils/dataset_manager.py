@@ -109,7 +109,7 @@ class DataManager:
         Returns:
             Dict[str, DataFrame]: A dictionary where keys are split names and values are the corresponding DataFrames.
         """
-        return {split: self.original_dataset[columns] for split, columns in prepared_splits.items()}
+        return {str(split): self.original_dataset[columns] for split, columns in prepared_splits.items()}
 
     def postprocess(self, generated_dataset: DataFrame) -> DataFrame:
         """ Postprocess the generated dataset to match the original dataset's columns.
