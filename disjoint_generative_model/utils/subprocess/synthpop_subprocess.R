@@ -33,7 +33,11 @@ input_file <- args[1]
 output_file <- args[2]
 num_to_generate <- as.numeric(args[3])
 
-if(args[4] == "") seed <- "sample" else seed <- as.numeric(args[4])
+if(args[4] == "") {
+    seed <- "sample"
+} else {
+    seed <- as.numeric(args[4])
+}
 
 # Call the function with arguments
 synthpop_random(input_file, output_file, num_to_generate, seed)

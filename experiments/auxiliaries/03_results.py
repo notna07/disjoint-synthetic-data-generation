@@ -26,6 +26,7 @@ NUM_REPS = 10
 
 ### Metrics
 metrics = {
+    "pca"       : {},
     "h_dist"    : {},
     "corr_diff" : {"mixed_corr": True},
     "auroc_diff" : {"model": "rf_cls"},
@@ -75,10 +76,10 @@ def model_experiment(df_train: DataFrame, df_test: DataFrame, label: str, model:
 def _single_mixed_model_experiment(df_train: DataFrame, gms: Dict[str, List[str]], id) -> DataFrame:
     """ Function to do runs of the mixed model. """
     Rf = RandomForestClassifier(n_estimators=100)
-    JS = UsingJoiningValidator(JoiningValidator(Rf, verbose=False), patience=5)
+    JS = UsingJoiningValidator(JoiningValidator(Rf, verbose=False), behaviour='adaptive')
 
     dgms = DisjointGenerativeModels(df_train, gms, joining_strategy=JS, worker_id=id*10)
-    dgms.join_multiplier = 8    # to ensure high enough resolution
+    dgms.join_multiplier = 4    # to ensure high enough resolution
 
     df_dgms = dgms.fit_generate()
 
@@ -107,7 +108,6 @@ def mixed_model_experiment(df_train: DataFrame, df_test: DataFrame, model1: str,
     return results
 
 ### Run experiments
-
 cart_results = model_experiment(df_train, df_test, label, 'synthpop', metrics)
 cart_results.to_csv('experiments/results/mixed_model_results/hepatitis_case_study/synthpop.csv')
 

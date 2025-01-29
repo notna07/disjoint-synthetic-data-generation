@@ -9,6 +9,7 @@ from typing import Dict, List
 from joblib import Parallel, delayed
 
 from .utils.dataset_manager import DataManager
+from .utils.generative_model_adapters import DataGeneratorAdapter
 from .utils.joining_strategies import JoinStrategy, Concatenating, UsingJoiningValidator
 
 from .utils.generative_model_adapters import generate_synthetic_data
@@ -28,7 +29,7 @@ class DisjointGenerativeModels:
     """
     def __init__(self,
                  training_data,
-                 generative_models: List[str] | Dict[str, List[str]],
+                 generative_models: List[str | DataGeneratorAdapter] | Dict[str | DataGeneratorAdapter, List[str]],
                  prepared_splits: Dict[str, List[str]] = None,
                  joining_strategy: JoinStrategy = UsingJoiningValidator(),
                  worker_id: int = 0,
@@ -37,7 +38,7 @@ class DisjointGenerativeModels:
 
         Args:
             training_data (DataFrame): The training data (before splitting).
-            generative_models (List[str] | Dict[str, List[str]]): The generative models to use (can add column name lists).
+            generative_models (List[str | DataGeneratorAdapter] | Dict[str | DataGeneratorAdapter, List[str]]): The generative models to use (can add column name lists).
             prepared_splits (Dict[str, List[str]]): Predefined splits of columns, if none use random splits for each model.
             joining_strategy (JoinStrategy): The strategy for joining dataframes, defaults to using joining validator.
             worker_id (int): Index for not overwriting files in parallel runs.
@@ -91,11 +92,12 @@ class DisjointGenerativeModels:
         # TODO: Calculate some other metric
         pass
 
-    def fit_generate(self, num_samples: int = None) -> DataFrame:
+    def fit_generate(self, num_samples: int = None, args: Dict[str, any] = {}) -> DataFrame:
         """ Fit the generative models to the training data and generate synthetic data.
         
         Args:
             num_samples (int): The number of samples to generate (defaults to len(train_data)).
+            args (Dict[str, any]): Additional arguments to pass to the generative models.
 
         Returns:
             DataFrame: The synthetic data.
@@ -111,7 +113,7 @@ class DisjointGenerativeModels:
         self._setup()
 
         syn_dfs_dict = {}
-        res = Parallel(n_jobs=-1)(delayed(generate_synthetic_data)(train_data, model, idx+self.worker_id, num_to_generate=self.num_samples) for idx, model, train_data in zip(range(len(self.generative_models)),self.generative_models, self.training_data.values()))
+        res = Parallel(n_jobs=-1)(delayed(generate_synthetic_data)(train_data, model, idx+self.worker_id, num_to_generate=self.num_samples, **args) for idx, model, train_data in zip(range(len(self.generative_models)),self.generative_models, self.training_data.values()))
         syn_dfs_dict = {split_name: df_syn for split_name, df_syn in zip(self.training_data.keys(), res)}
 
         synthetic_data = self.conduct_joining(syn_dfs_dict)

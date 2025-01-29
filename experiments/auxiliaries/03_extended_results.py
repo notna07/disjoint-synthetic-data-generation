@@ -54,10 +54,10 @@ def worker(df_train: DataFrame, df_test: DataFrame, model: str, id: int, target_
             gms = {models[0]: cat_atts, models[1]: num_atts}
 
             Rf = RandomForestClassifier(n_estimators=100)
-            JS = UsingJoiningValidator(JoiningValidator(Rf, verbose=False), patience=3)
+            JS = UsingJoiningValidator(JoiningValidator(Rf, verbose=False), behaviour='adaptive')
 
-            dgms = DisjointGenerativeModels(df_train, gms, joining_strategy=JS)
-            dgms.join_multiplier = 8
+            dgms = DisjointGenerativeModels(df_train, gms, joining_strategy=JS, worker_id = np.random.randint(0, 100))
+            dgms.join_multiplier = 4
 
             df_temp = dgms.fit_generate()[:len(df_train)]
         case _:
@@ -89,10 +89,8 @@ def check_specified_splits_for_mixed_model(models: List[str], data_name_key: str
     # Check if the results file exists
     if os.path.exists(results_file):
         results_df = pd.read_csv(results_file)
-        # results_create_flag = False
     else:
         results_df = pd.DataFrame(columns=['dataset'])
-        # results_create_flag = True
 
     missing_counts = {model: max(0, NUM_EXP - results_df[results_df['dataset'] == model].shape[0]) for model in models+['dgms']}
 
@@ -106,14 +104,15 @@ if __name__ == '__main__':
     models = ['datasynthesizer', 'dpgan']
 
     metrics = {
-    "h_dist"    : {},
-    "corr_diff" : {"mixed_corr": True},
-    "auroc_diff": {"model": "rf_cls"},
-    "cls_acc"   : {"F1_type": "macro"},
-    "eps_risk"  : {},
-    "dcr"       : {},
-    "mia"       : {"num_eval_iter": 5},
-}
+        "pca"       : {},
+        "h_dist"    : {},
+        "corr_diff" : {"mixed_corr": True},
+        "auroc_diff": {"model": "rf_cls"},
+        "cls_acc"   : {"F1_type": "macro"},
+        "eps_risk"  : {},
+        "dcr"       : {},
+        "mia"       : {"num_eval_iter": 5},
+        }
 
     train_data = {
         'al':pd.read_csv('experiments/datasets/alzheimers_train.csv'),

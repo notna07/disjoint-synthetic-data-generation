@@ -3,12 +3,18 @@
 # Date: 18-11-2024
 
 import os
+import subprocess
 
 import pandas as pd
 
-from typing import List
+from typing import List, Dict
 from pandas import DataFrame
 from abc import ABC, abstractmethod
+
+from synthcity.plugins import Plugins
+
+from DataSynthesizer.DataDescriber import DataDescriber
+from DataSynthesizer.DataGenerator import DataGenerator
 
 def _load_data(file_name: str) -> DataFrame:
     df_train = pd.read_csv(file_name + '.csv').dropna()
@@ -29,8 +35,11 @@ class DataGeneratorAdapter(ABC):
     Required Methods:
         generate(train_data_name: str | DataFrame, num_to_generate: int = None, id: int = 0) -> DataFrame: Generate synthetic data.
     """
+    def __str__(self):
+        return f"{self.name}"
+
     @abstractmethod
-    def generate(self, train_data_name: str | DataFrame, num_to_generate: int = None, id: int = 0) -> DataFrame:
+    def generate(self, train_data_name: str | DataFrame, num_to_generate: int = None, id: int = 0, **kwargs) -> DataFrame:
         """ Generate synthetic data based on the training data.
 
         Args:
@@ -50,7 +59,7 @@ class SynthCityAdapter(DataGeneratorAdapter):
     def __init__(self, gen_model):
         self.gen_model = gen_model
 
-    def generate(self, train_data: str | DataFrame, num_to_generate: int = None, id: int = 0) -> DataFrame:
+    def generate(self, train_data: str | DataFrame, num_to_generate: int = None, id: int = 0, **kwargs) -> DataFrame:
         """ Generate synthetic data using SynthCity.
 
         Reference:
@@ -71,13 +80,13 @@ class SynthCityAdapter(DataGeneratorAdapter):
             >>> isinstance(df_syn, pd.DataFrame)
             True
         """
-        from synthcity.plugins import Plugins
+        
         if isinstance(train_data, str):
             df_train = _load_data(train_data)
         else:
             df_train = train_data
 
-        syn_model = Plugins().get(self.gen_model, random_state = id)
+        syn_model = Plugins().get(self.gen_model, random_state = id, **kwargs)
         syn_model.fit(df_train)
 
         if num_to_generate is None: num_to_generate = len(df_train)
@@ -96,7 +105,7 @@ class SynthCityAdapter(DataGeneratorAdapter):
         return df_syn[:num_to_generate]
 
 class SynthPopAdapter(DataGeneratorAdapter):
-    def generate(self, train_data: str | DataFrame, num_to_generate: int = None, id: int = None) -> DataFrame:
+    def generate(self, train_data: str | DataFrame, num_to_generate: int = None, id: int = None,  **kwargs) -> DataFrame:
         """ Generate synthetic data using SynthPop in R using subprocess.
         Be sure to check that R is installed and Rscript is a valid command in the terminal.
 
@@ -118,7 +127,6 @@ class SynthPopAdapter(DataGeneratorAdapter):
             True
         """
         # if self.r_access == 'subprocess':
-        import subprocess
 
         if isinstance(train_data, str):
             train_data_name = train_data
@@ -190,7 +198,15 @@ class SynthPopAdapter(DataGeneratorAdapter):
         #     return df_syn.reset_index(drop=True)
 
 class DataSynthesizerAdapter(DataGeneratorAdapter):
-    def generate(self, train_data: str | DataFrame, num_to_generate: int = None, id: int = 0) -> DataFrame:
+    """ DataSynthesizer Adapter for generating synthetic data.
+
+    Attributes:
+        epsilon (float): The privacy parameter epsilon for differential privacy (0 is turned off).
+    """
+    def __init__(self, epsilon: float = 0):
+        self.epsilon = epsilon
+
+    def generate(self, train_data: str | DataFrame, num_to_generate: int = None, id: int = 0, **kwargs) -> DataFrame:
         """ Generate synthetic data using DataSynthesizer.
 
         Reference:
@@ -212,8 +228,6 @@ class DataSynthesizerAdapter(DataGeneratorAdapter):
             >>> isinstance(df_syn, pd.DataFrame)
             True
         """
-        from DataSynthesizer.DataDescriber import DataDescriber
-        from DataSynthesizer.DataGenerator import DataGenerator
 
         if isinstance(train_data, str):
             train_data_name = train_data
@@ -230,7 +244,8 @@ class DataSynthesizerAdapter(DataGeneratorAdapter):
                                                                 epsilon=0, 
                                                                 k=2,
                                                                 attribute_to_is_categorical={},
-                                                                seed = id)
+                                                                seed = id
+                                                                )
         describer.save_dataset_description_to_file(description_file)
 
         generator = DataGenerator()
@@ -245,12 +260,12 @@ class DataSynthesizerAdapter(DataGeneratorAdapter):
         return df_syn
 
 class DebugAdapter(DataGeneratorAdapter):
-    def generate(self, train_data: str, num_to_generate: int = None, id: int = 0) -> DataFrame:
+    def generate(self, train_data: str, num_to_generate: int = None, id: int = 0,  **kwargs) -> DataFrame:
         if isinstance(train_data, str):
             train_data = _load_data(train_data)
         return train_data
 
-def generate_synthetic_data(train_data: DataFrame | str, gen_model: str, id: int = 0, num_to_generate: int = None) -> DataFrame:
+def generate_synthetic_data(train_data: DataFrame | str, gen_model: str, id: int = 0, num_to_generate: int = None, **kwargs) -> DataFrame:
     """ Generate synthetic data using the specified generative model.
 
     Args:
@@ -267,6 +282,7 @@ def generate_synthetic_data(train_data: DataFrame | str, gen_model: str, id: int
         >>> isinstance(df_syn, pd.DataFrame)
         True
     """
+    # TODO: stop instantiating all adapters every time
     adapters = {
         'ctgan': SynthCityAdapter(gen_model),
         'adsgan': SynthCityAdapter(gen_model),
@@ -277,12 +293,15 @@ def generate_synthetic_data(train_data: DataFrame | str, gen_model: str, id: int
         'privbayes': SynthCityAdapter(gen_model),
         'synthpop': SynthPopAdapter(),
         'datasynthesizer': DataSynthesizerAdapter(),
+        'datasynthesizer-dp': DataSynthesizerAdapter(epsilon=0.1),
         'debug': DebugAdapter()
     }
 
     if gen_model in adapters:
         adapter = adapters[gen_model]
-        df_syn = adapter.generate(train_data, num_to_generate, id)
+        df_syn = adapter.generate(train_data, num_to_generate, id, **kwargs)
+    elif isinstance(gen_model, DataGeneratorAdapter):
+        df_syn = gen_model.generate(train_data, num_to_generate, id, **kwargs)
     else:
         raise NotImplementedError("The chosen generative model could not be run!")
 
