@@ -208,7 +208,7 @@ class OneClassValidator:
             raise ValueError('The one-class model must have a score_samples method')
 
         self.one_class_model = one_class
-        self.threshold = -0.5
+        self.threshold = 0.5
         self.auto_threshold_percentage = None
         self.verbose = verbose
         pass
@@ -293,7 +293,7 @@ class OneClassValidator:
             >>> isinstance(result, pd.DataFrame)
             True
         """
-        pred = self.one_class_model.score_samples(query_data.values)
+        pred = 0.5+self.one_class_model.decision_function(query_data.values)
         if self.threshold == "auto":
             self.threshold = sorted(pred, reverse=True)[int(self.auto_threshold_percentage*len(query_data))]
             print("Threshold auto-set to:", self.threshold)
@@ -419,14 +419,14 @@ class OutlierValidator:
             >>> isinstance(result, pd.DataFrame)
             True
         """
-        pred = -self.outlier_detection_model.decision_function(query_data.values) #multiply by -1 to map the scores from [inlier, outlier] => [0, 1] to [outlier, inlier] => [-1, 0] for consistency with different framework behaviors. 
+        pred = -self.outlier_detection_model.decision_function(query_data.values)+1 #multiply by -1 to map the scores from [inlier, outlier] => [0, 1] to [outlier, inlier] => [0, 1] for consistency with different framework behaviors. 
         if self.threshold == "auto":
             self.threshold = sorted(pred, reverse=False)[int(self.auto_threshold_percentage*len(query_data))]
             print("Threshold auto-set to:", self.threshold)
 
         pred = (pred >= self.threshold).astype(int)
-        if self.verbose: print(f'Predicted good joins fraction: {(pred==0).mean()}')
-        return query_data.loc[pred==0]
+        if self.verbose: print(f'Predicted good joins fraction: {(pred==1).mean()}')
+        return query_data.loc[pred==1]
 
 
 if __name__ == "__main__":
