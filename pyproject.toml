@@ -36,6 +36,4 @@ include = [
 packages = ["disjoint_generative_model"]
 
 [tool.poetry.dependencies]
-python = "^3.8"
-thinc = "^8.1.13"  # Update to the latest version
-cython = ">=0.29.21,<3.0.0"  # Specify a compatible version range
+python = "^3.9"
