@@ -178,12 +178,13 @@ class UsingJoiningValidator(JoinStrategy):
             ...    }
             >>> validator = JoiningValidator(LogisticRegression(), verbose = False)
             >>> validator.fit_classifier(dict_dfs, 
-            ...                             number_of_stratified_k_fold=2, 
+            ...                             number_of_validation_folds=2, 
             ...                             num_batches_of_bad_joins=2, 
             ...                             random_state=42
             ...                             )
             >>> strategy = UsingJoiningValidator(validator)
-            >>> result = strategy.join(dict_dfs)
+            >>> result = strategy.join(dict_dfs) # doctest: +ELLIPSIS
+            Threshold auto-set to: ...
             >>> isinstance(result, pd.DataFrame)
             True
             

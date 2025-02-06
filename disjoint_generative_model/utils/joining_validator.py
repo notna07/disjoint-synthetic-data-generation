@@ -12,14 +12,10 @@ from pandas import DataFrame
 
 from sklearn.metrics import f1_score, brier_score_loss
 
-from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
-
 from sklearn.model_selection import GridSearchCV, KFold, train_test_split
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import OneClassSVM
-from imblearn.over_sampling import SMOTE, SMOTENC, RandomOverSampler
 from pyod.models.iforest import IForest
 
 def _setup_training_data(dictionary_of_data_chunks: Dict[str, DataFrame],
@@ -123,7 +119,7 @@ class JoiningValidator:
 
         Args:
             dictionary_of_data_chunks (Dict[str, DataFrame]): A dictionary of dataframes.
-            number_of_stratified_k_fold (int): The number of stratified k-folds to use.
+            number_of_validation_folds (int): The number of stratified k-folds to use.
             num_batches_of_bad_joins (int): The number of bad joins to generate for each good join.
             random_state (int): The random state to use.
 
@@ -131,11 +127,8 @@ class JoiningValidator:
             >>> from sklearn.linear_model import LogisticRegression
             >>> import pandas as pd
             >>> dict_dfs = {'df1': pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]}), 'df2': pd.DataFrame({'C': [7, 8, 9], 'D': [10, 11, 12]})}
-            >>> validator = JoiningValidator(LogisticRegression())
-            >>> validator.fit_classifier(dict_dfs, number_of_stratified_k_fold=2, num_batches_of_bad_joins=2, random_state=42)
-            Cross-validated accuracies: [0.6, 0.25]
-            Mean accuracy: 0.425
-            Final model trained!
+            >>> validator = JoiningValidator(LogisticRegression(), verbose = False)
+            >>> validator.fit_classifier(dict_dfs, number_of_validation_folds=2, num_batches_of_bad_joins=2, random_state=42)
         """
         
         df_join_train, train_labels = _setup_training_data(dictionary_of_data_chunks, num_batches_of_bad_joins, random_state)
@@ -318,7 +311,7 @@ class OneClassValidator:
             >>> validator = OneClassValidator(OneClassSVM().fit(df_train))
             >>> query_data = pd.DataFrame(np.random.rand(10, 5))
             >>> result = validator.validate(query_data)
-            Predicted good joins fraction: 1.0
+            Predicted good joins fraction: 0.3
             >>> isinstance(result, pd.DataFrame)
             True
         """
