@@ -2,6 +2,7 @@
 # Date: 18-11-2024
 # Author : Anton D. Lautrup
 
+import time
 import warnings
 
 import pandas as pd
@@ -189,10 +190,10 @@ class UsingJoiningValidator(JoinStrategy):
         """
         while_index = 0
         df_good_joins = None
-
+        
         patience_counter = 0
         while while_index < self.max_iter and len(data[list(data.keys())[0]]) > 0:
-            for key, _ in data.items():
+            for i, key in enumerate(data.keys()):
                 data[key] = data[key].sample(frac=1).reset_index(drop=True)
             df_attempt = pd.concat(data.values(), axis=1)
 

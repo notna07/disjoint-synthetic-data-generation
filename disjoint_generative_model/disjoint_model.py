@@ -78,12 +78,24 @@ class DisjointGenerativeModels:
             self.num_samples = len(self.original_data)
 
         if hasattr(self._strategy, 'join_validator'):
-            self._strategy.join_validator.fit_classifier(self.training_data)
+            self._strategy.join_validator.fit_classifier(self.training_data, num_batches_of_bad_joins=2)
             self._strategy.max_size = int(self.num_samples)
             self.num_samples = int(self.join_multiplier*self.num_samples)   # multiplier of three seems to do well enough
 
         if isinstance(self.generative_models, Dict):     # get model names from dict to list
             self.generative_models = list(self.generative_models.keys())
+        pass
+
+    def _make_calibration_plot(self, holdout_data: DataFrame, save: bool = True) -> None:
+        """ Make calibration plots for the validator model fit quality"""
+        assert hasattr(self._strategy, 'join_validator'), "No validator model found."
+
+        from .utils.plots import plot_calibration_curve
+
+        dm_temp = DataManager(holdout_data, self.used_splits)
+        enc_data = dm_temp.encoded_dataset_dict
+
+        plot_calibration_curve(self._strategy.join_validator, self.training_data, enc_data, save_dir='plots', save_fig = save)
         pass
 
     def _evaluate_splits(self):

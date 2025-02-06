@@ -88,6 +88,7 @@ class DataManager:
 
         self.original_dataset = original_dataset
 
+        #BUG: If prepared splits is a dictionary, it cannot have two of the same model names
         if prepared_splits is not None:
             if isinstance(list(prepared_splits.values())[0],list):
                 self.column_splits = prepared_splits
