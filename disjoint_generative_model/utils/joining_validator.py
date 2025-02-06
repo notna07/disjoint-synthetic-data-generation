@@ -7,12 +7,13 @@ import pandas as pd
 
 import copy
 
-from typing import Dict
+from typing import Dict, Literal
 from pandas import DataFrame
 
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, brier_score_loss
 
-from sklearn.model_selection import StratifiedKFold, KFold, train_test_split
+from sklearn.model_selection import GridSearchCV, KFold, train_test_split
+from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import OneClassSVM
 from pyod.models.iforest import IForest
@@ -45,7 +46,7 @@ def _setup_training_data(dictionary_of_data_chunks: Dict[str, DataFrame],
 
     correct_joins, incorrect_joins = [], []
     for _, dataset_chunk in dictionary_of_data_chunks.items():
-        correct_joins.append(dataset_chunk)
+        correct_joins.append(dataset_chunk.sample(frac=num_batches_of_bad_joins, random_state=0, replace=True).reset_index(drop=True))
         incorrect_joins.append(dataset_chunk.sample(frac=num_batches_of_bad_joins, random_state=random_state, replace=True).reset_index(drop=True))
         if random_state is not None: random_state += 1
 
@@ -72,7 +73,10 @@ class JoiningValidator:
         validate: Validate the given DataFrame using the trained model.
     """
     def __init__(self, 
-                 classifier_model_base: object = RandomForestClassifier(n_estimators=100),
+                 classifier_model_base: object = RandomForestClassifier(n_estimators=100, max_depth=5),
+                 model_parameter_grid: dict = None,
+                 calibration_method: Literal['isotonic', 'sigmoid'] | None = 'isotonic',
+                 save_proba: bool = False,
                  verbose = True,
                  ):
         
@@ -84,9 +88,12 @@ class JoiningValidator:
         if not hasattr(classifier_model_base, 'predict_proba'):
             raise ValueError('The classifier model must have a predict_proba method')
 
-        self.classifier_model = classifier_model_base
+        self.model = classifier_model_base
+        self.params = model_parameter_grid
+        self.calibration_method = calibration_method
         self.threshold = 0.5
         self.auto_threshold_percentage = None
+        self.save_proba = save_proba
         self.verbose = verbose
         pass
 
@@ -104,7 +111,7 @@ class JoiningValidator:
 
     def fit_classifier(self,
                        dictionary_of_data_chunks: Dict[str, DataFrame],
-                       number_of_stratified_k_fold: int = 5,
+                       number_of_validation_folds: int = 2,
                        num_batches_of_bad_joins: int = 2,
                        random_state: int = None,
                        ) -> None:
@@ -112,7 +119,7 @@ class JoiningValidator:
 
         Args:
             dictionary_of_data_chunks (Dict[str, DataFrame]): A dictionary of dataframes.
-            number_of_stratified_k_fold (int): The number of stratified k-folds to use.
+            number_of_validation_folds (int): The number of stratified k-folds to use.
             num_batches_of_bad_joins (int): The number of bad joins to generate for each good join.
             random_state (int): The random state to use.
 
@@ -120,35 +127,46 @@ class JoiningValidator:
             >>> from sklearn.linear_model import LogisticRegression
             >>> import pandas as pd
             >>> dict_dfs = {'df1': pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]}), 'df2': pd.DataFrame({'C': [7, 8, 9], 'D': [10, 11, 12]})}
-            >>> validator = JoiningValidator(LogisticRegression())
-            >>> validator.fit_classifier(dict_dfs, number_of_stratified_k_fold=2, num_batches_of_bad_joins=2, random_state=42)
-            Cross-validated accuracies: [0.6, 0.25]
-            Mean accuracy: 0.425
-            Final model trained!
+            >>> validator = JoiningValidator(LogisticRegression(), verbose = False)
+            >>> validator.fit_classifier(dict_dfs, number_of_validation_folds=2, num_batches_of_bad_joins=2, random_state=42)
         """
         
         df_join_train, train_labels = _setup_training_data(dictionary_of_data_chunks, num_batches_of_bad_joins, random_state)
         train_labels = np.array(train_labels)
 
-        skf = StratifiedKFold(n_splits=number_of_stratified_k_fold, shuffle=True, random_state=random_state)
+        base_model = copy.copy(self.model)
+
+        if self.params is not None:
+            if self.verbose: print("Validator: Grid search for hyperparameters")
+            grid_search = GridSearchCV(estimator=base_model, param_grid=self.params, n_jobs=-1, cv=number_of_validation_folds, scoring='neg_brier_score')#"balanced_accuracy")#
+            grid_result = grid_search.fit(df_join_train, train_labels)
+
+            if self.verbose: print("Validator: Best Brier score %f using %s" % (grid_result.best_score_, grid_result.best_params_))
+            estimator = grid_result.best_estimator_
+        else:
+            if self.verbose: print("Validator: No search parameters specified. Using default configuration.")
+            estimator = base_model
+            estimator.fit(df_join_train, train_labels)
         
-        accuracies = []
-        for train_index, test_index in skf.split(df_join_train, train_labels):
-            temp_model = copy.copy(self.classifier_model)
-            X_train, X_test = df_join_train.iloc[train_index], df_join_train.iloc[test_index]
-            y_train, y_test = train_labels[train_index], train_labels[test_index]
-            
-            temp_model.fit(X_train, y_train)
-            y_pred = temp_model.predict(X_test)
-            accuracies.append((y_pred.round() == y_test).mean())
+        y_pred = estimator.predict(df_join_train)
 
-        if self.verbose:
-            print(f'Cross-validated accuracies: {accuracies}')
-            print(f'Mean accuracy: {sum(accuracies) / len(accuracies)}')
+        score_pre = brier_score_loss(train_labels, y_pred)
+        if self.calibration_method is not None:
+            calibrated_model = CalibratedClassifierCV(estimator, cv='prefit', method=self.calibration_method)
+            calibrated_model.fit(df_join_train, train_labels)
+            y_pred = calibrated_model.predict(df_join_train)
+            score_post = brier_score_loss(train_labels, y_pred)
 
-        self.classifier_model = self.classifier_model.fit(df_join_train, train_labels)
+            if score_post < score_pre:
+                if self.verbose: print(f"Validator: Calibration improved the model from {score_pre:.4f} to {score_post:.4f}")
+                fitted_model = calibrated_model
+            else:
+                if self.verbose: print(f"Validator: Calibration did not improve the model. Using the original model.")
+                fitted_model = estimator
+        else:
+            fitted_model = estimator
 
-        if self.verbose: print('Final model trained!')
+        self.model = fitted_model
         pass
     
     def validate(self, query_data: DataFrame) -> DataFrame:
@@ -172,11 +190,15 @@ class JoiningValidator:
             Predicted good joins fraction: 0.9
             >>> isinstance(result, pd.DataFrame)
             True
-        """     
-        pred = self.classifier_model.predict_proba(query_data.values)[:,1]
+        """
+        pred = self.model.predict_proba(query_data.values)[:,1]
         if self.threshold == "auto":
             self.threshold = sorted(pred, reverse=True)[int(self.auto_threshold_percentage*len(query_data))]
             print("Threshold auto-set to:", self.threshold)
+
+            if self.save_proba:
+                from .plots import plot_proba_hist
+                plot_proba_hist(pred, save_dir='plots')
 
         pred = (pred >= self.threshold).astype(int)
         if self.verbose: print(f'Predicted good joins fraction: {(pred==1).mean()}')
@@ -195,20 +217,20 @@ class OneClassValidator:
         validate: Validate the given DataFrame using the trained model.
     """
     def __init__(self, 
-                 one_class: object = OneClassSVM(),
+                 one_class_model: object = OneClassSVM(),
                  verbose = True,
                  ):
         
         # check that the classifier model is a valid model
-        if not hasattr(one_class, 'fit'):
+        if not hasattr(one_class_model, 'fit'):
             raise ValueError('The one-class model must have a fit method')
-        if not hasattr(one_class, 'predict'):
+        if not hasattr(one_class_model, 'predict'):
             raise ValueError('The one-class model must have a predict method')
-        if not hasattr(one_class, 'score_samples'):
+        if not hasattr(one_class_model, 'score_samples'):
             raise ValueError('The one-class model must have a score_samples method')
 
-        self.one_class_model = one_class
-        self.threshold = -0.5
+        self.model = one_class_model
+        self.threshold = 0.5
         self.auto_threshold_percentage = None
         self.verbose = verbose
         pass
@@ -250,7 +272,7 @@ class OneClassValidator:
 
         accuracies = []
         for train_index, test_index in kf.split(df_join_train[train_labels==1]):
-            temp_oc = copy.copy(self.one_class_model)
+            temp_oc = copy.copy(self.model)
             X_train, X_test_inliers = df_join_train.iloc[train_index], df_join_train.iloc[test_index]
             X_test_outliers = df_join_train[train_labels==-1].reset_index(drop=True).iloc[test_index]
             temp_oc.fit(X_train)
@@ -267,7 +289,7 @@ class OneClassValidator:
             print(f'F1-Score (Good Joins): {accuracies}')
             print(f'Mean F1: {sum(accuracies) / len(accuracies)}')
 
-        self.one_class_model.fit(df_join_train[train_labels==1])
+        self.model.fit(df_join_train[train_labels==1])
 
         if self.verbose: print('Final model trained!')
         pass
@@ -289,11 +311,11 @@ class OneClassValidator:
             >>> validator = OneClassValidator(OneClassSVM().fit(df_train))
             >>> query_data = pd.DataFrame(np.random.rand(10, 5))
             >>> result = validator.validate(query_data)
-            Predicted good joins fraction: 1.0
+            Predicted good joins fraction: 0.3
             >>> isinstance(result, pd.DataFrame)
             True
         """
-        pred = self.one_class_model.score_samples(query_data.values)
+        pred = 0.5+self.model.decision_function(query_data.values)
         if self.threshold == "auto":
             self.threshold = sorted(pred, reverse=True)[int(self.auto_threshold_percentage*len(query_data))]
             print("Threshold auto-set to:", self.threshold)
@@ -317,23 +339,23 @@ class OutlierValidator:
         validate: Validate the given DataFrame using the trained model.
     """
     def __init__(self, 
-                 outlier_detector: object = IForest(),
+                 outlier_detector_model: object = IForest(),
                  verbose = True,
                  ):
         
         # check that the classifier model is a valid model
-        if not hasattr(outlier_detector, 'fit'):
+        if not hasattr(outlier_detector_model, 'fit'):
             raise ValueError('The outlier detection model must have a fit method')
-        if not hasattr(outlier_detector, 'predict'):
+        if not hasattr(outlier_detector_model, 'predict'):
             raise ValueError('The outlier detection model must have a predict method')
-        if not hasattr(outlier_detector, 'decision_function'):
+        if not hasattr(outlier_detector_model, 'decision_function'):
             raise ValueError('The outlier detection model must have a decision_function method')
 
-        self.outlier_detection_model = outlier_detector
+        self.model = outlier_detector_model
         self.threshold = 0.5
         self.auto_threshold_percentage = None
         self.flex = 0.5
-        self.outlier_detection_model.contamination = self.flex / 2
+        self.model.contamination = self.flex / 2
         self.verbose = verbose
         pass
 
@@ -373,7 +395,7 @@ class OutlierValidator:
         accuracies = []
         if len(df_join_train_outlier) != 1:
             for i in range(number_of_k_fold):
-                temp_od = self.outlier_detection_model
+                temp_od = self.model
                 inlier_train, inlier_test = train_test_split(df_join_train_inlier, test_size=1/number_of_k_fold, random_state=random_state if random_state is None else random_state+i)
                 outlier_train, outlier_test = train_test_split(df_join_train_outlier, test_size=1/number_of_k_fold, random_state=random_state if random_state is None else random_state+i)
                 combined_train = pd.concat([inlier_train, outlier_train], ignore_index=True)
@@ -393,7 +415,7 @@ class OutlierValidator:
                 print(f'F1-Score (Good Joins): {accuracies}')
                 print(f'Mean F1: {sum(accuracies) / len(accuracies)}')
 
-        self.classifier_model = self.outlier_detection_model.fit(pd.concat([df_join_train_inlier, df_join_train_outlier], ignore_index=True))
+        self.model = self.model.fit(pd.concat([df_join_train_inlier, df_join_train_outlier], ignore_index=True))
 
         if self.verbose: print('Final model trained!')
         pass
@@ -419,14 +441,14 @@ class OutlierValidator:
             >>> isinstance(result, pd.DataFrame)
             True
         """
-        pred = -self.outlier_detection_model.decision_function(query_data.values) #multiply by -1 to map the scores from [inlier, outlier] => [0, 1] to [outlier, inlier] => [-1, 0] for consistency with different framework behaviors. 
+        pred = -self.model.decision_function(query_data.values)+1 #multiply by -1 to map the scores from [inlier, outlier] => [0, 1] to [outlier, inlier] => [0, 1] for consistency with different framework behaviors. 
         if self.threshold == "auto":
             self.threshold = sorted(pred, reverse=False)[int(self.auto_threshold_percentage*len(query_data))]
             print("Threshold auto-set to:", self.threshold)
 
         pred = (pred >= self.threshold).astype(int)
-        if self.verbose: print(f'Predicted good joins fraction: {(pred==0).mean()}')
-        return query_data.loc[pred==0]
+        if self.verbose: print(f'Predicted good joins fraction: {(pred==1).mean()}')
+        return query_data.loc[pred==1]
 
 
 if __name__ == "__main__":

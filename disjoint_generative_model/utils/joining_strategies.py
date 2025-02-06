@@ -2,6 +2,7 @@
 # Date: 18-11-2024
 # Author : Anton D. Lautrup
 
+import time
 import warnings
 
 import pandas as pd
@@ -177,22 +178,23 @@ class UsingJoiningValidator(JoinStrategy):
             ...    }
             >>> validator = JoiningValidator(LogisticRegression(), verbose = False)
             >>> validator.fit_classifier(dict_dfs, 
-            ...                             number_of_stratified_k_fold=2, 
+            ...                             number_of_validation_folds=2, 
             ...                             num_batches_of_bad_joins=2, 
             ...                             random_state=42
             ...                             )
             >>> strategy = UsingJoiningValidator(validator)
-            >>> result = strategy.join(dict_dfs)
+            >>> result = strategy.join(dict_dfs) # doctest: +ELLIPSIS
+            Threshold auto-set to: ...
             >>> isinstance(result, pd.DataFrame)
             True
             
         """
         while_index = 0
         df_good_joins = None
-
+        
         patience_counter = 0
         while while_index < self.max_iter and len(data[list(data.keys())[0]]) > 0:
-            for key, _ in data.items():
+            for i, key in enumerate(data.keys()):
                 data[key] = data[key].sample(frac=1).reset_index(drop=True)
             df_attempt = pd.concat(data.values(), axis=1)
 

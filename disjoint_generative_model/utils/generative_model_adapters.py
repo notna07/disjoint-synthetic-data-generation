@@ -76,7 +76,6 @@ class SynthCityAdapter(DataGeneratorAdapter):
         Example:
             >>> adapter = SynthCityAdapter('privbayes')
             >>> df_syn = adapter.generate('tests/dummy_train') # doctest: +ELLIPSIS
-            -etc-
             >>> isinstance(df_syn, pd.DataFrame)
             True
         """
