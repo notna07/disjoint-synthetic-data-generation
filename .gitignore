@@ -161,6 +161,7 @@ cython_debug/
 tests/dummy_synthpop.csv
 /.vscode
 /workspace
+/plots
 
 # Ignore SynthEval files
 SE_*
