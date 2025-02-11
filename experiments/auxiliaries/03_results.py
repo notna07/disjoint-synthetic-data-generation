@@ -75,8 +75,13 @@ def model_experiment(df_train: DataFrame, df_test: DataFrame, label: str, model:
 
 def _single_mixed_model_experiment(df_train: DataFrame, gms: Dict[str, List[str]], id) -> DataFrame:
     """ Function to do runs of the mixed model. """
-    Rf = RandomForestClassifier(n_estimators=100)
-    JS = UsingJoiningValidator(JoiningValidator(Rf, verbose=False), behaviour='adaptive')
+    parameter_grid = {'n_estimators': [10, 50, 100], 'max_depth': [5, 10, 15, None], 'criterion': ['gini', 'entropy', 'log_loss']}
+    JV = JoiningValidator(classifier_model_base=RandomForestClassifier(), 
+                          model_parameter_grid=parameter_grid,  
+                          calibration_method='sigmoid',
+                          save_proba=True,
+                          verbose=False)
+    JS = UsingJoiningValidator(JV, behaviour='adaptive')
 
     dgms = DisjointGenerativeModels(df_train, gms, joining_strategy=JS, worker_id=id*10)
     dgms.join_multiplier = 4    # to ensure high enough resolution
@@ -109,36 +114,36 @@ def mixed_model_experiment(df_train: DataFrame, df_test: DataFrame, model1: str,
 
 ### Run experiments
 cart_results = model_experiment(df_train, df_test, label, 'synthpop', metrics)
-cart_results.to_csv('experiments/results/mixed_model_results/hepatitis_case_study/synthpop.csv')
+cart_results.to_csv('experiments/results/hepatitis_case_study_adapt/synthpop.csv')
 
 bn_results = model_experiment(df_train, df_test, label, 'datasynthesizer', metrics)
-bn_results.to_csv('experiments/results/mixed_model_results/hepatitis_case_study/datasynthesizer.csv')
+bn_results.to_csv('experiments/results/hepatitis_case_study_adapt/datasynthesizer.csv')
 
 ctgan_results = model_experiment(df_train, df_test, label, 'ctgan', metrics)
-ctgan_results.to_csv('experiments/results/mixed_model_results/hepatitis_case_study/ctgan.csv')
+ctgan_results.to_csv('experiments/results/hepatitis_case_study_adapt/ctgan.csv')
 
 adsgan_results = model_experiment(df_train, df_test, label, 'adsgan', metrics)
-adsgan_results.to_csv('experiments/results/mixed_model_results/hepatitis_case_study/adsgan.csv')
+adsgan_results.to_csv('experiments/results/hepatitis_case_study_adapt/adsgan.csv')
 
 dpgan_results = model_experiment(df_train, df_test, label, 'dpgan', metrics)
-dpgan_results.to_csv('experiments/results/mixed_model_results/hepatitis_case_study/dpgan.csv')
+dpgan_results.to_csv('experiments/results/hepatitis_case_study_adapt/dpgan.csv')
 
 df_dgms = mixed_model_experiment(df_train, df_test, 'synthpop', 'ctgan', cat_atts, num_atts, label, metrics)
-df_dgms.to_csv('experiments/results/mixed_model_results/hepatitis_case_study/synthpop_ctgan.csv')
+df_dgms.to_csv('experiments/results/hepatitis_case_study_adapt/synthpop_ctgan.csv')
 
 df_dgms = mixed_model_experiment(df_train, df_test, 'synthpop', 'adsgan', cat_atts, num_atts, label, metrics)
-df_dgms.to_csv('experiments/results/mixed_model_results/hepatitis_case_study/synthpop_adsgan.csv')
+df_dgms.to_csv('experiments/results/hepatitis_case_study_adapt/synthpop_adsgan.csv')
 
 df_dgms = mixed_model_experiment(df_train, df_test, 'synthpop', 'dpgan', cat_atts, num_atts, label, metrics)
-df_dgms.to_csv('experiments/results/mixed_model_results/hepatitis_case_study/synthpop_dpgan.csv')
+df_dgms.to_csv('experiments/results/hepatitis_case_study_adapt/synthpop_dpgan.csv')
 
 df_dgms = mixed_model_experiment(df_train, df_test, 'datasynthesizer', 'ctgan', cat_atts, num_atts, label, metrics)
-df_dgms.to_csv('experiments/results/mixed_model_results/hepatitis_case_study/datasynthesizer_ctgan.csv')
+df_dgms.to_csv('experiments/results/hepatitis_case_study_adapt/datasynthesizer_ctgan.csv')
 
 df_dgms = mixed_model_experiment(df_train, df_test, 'datasynthesizer', 'adsgan', cat_atts, num_atts, label, metrics)
-df_dgms.to_csv('experiments/results/mixed_model_results/hepatitis_case_study/datasynthesizer_adsgan.csv')
+df_dgms.to_csv('experiments/results/hepatitis_case_study_adapt/datasynthesizer_adsgan.csv')
 
 df_dgms = mixed_model_experiment(df_train, df_test, 'datasynthesizer', 'dpgan', cat_atts, num_atts, label, metrics)
-df_dgms.to_csv('experiments/results/mixed_model_results/hepatitis_case_study/datasynthesizer_dpgan.csv')
+df_dgms.to_csv('experiments/results/hepatitis_case_study_adapt/datasynthesizer_dpgan.csv')
 
 print('Done!')

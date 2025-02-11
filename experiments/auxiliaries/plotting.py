@@ -27,7 +27,7 @@ def _format_correctly(res_df: pd.DataFrame, dataset: str, metric: str):
 def _construct_dataframe(datasets: List[str], models, metrics: List):
     df_results = None
     for dataset in datasets:
-        res = pd.read_csv(f'experiments/results/mixed_model_results/{models[0]}_{models[1]}_{dataset}.csv')
+        res = pd.read_csv(f'experiments/results/other_datasets_adapt/{models[0]}_{models[1]}_{dataset}.csv')
 
         res_dgms = res[res['dataset'] == 'dgms'].reset_index(drop=True)
         res_dpgan = res[res['dataset'] == models[1]].reset_index(drop=True)

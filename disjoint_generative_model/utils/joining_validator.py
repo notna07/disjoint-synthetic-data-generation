@@ -250,6 +250,7 @@ class OneClassValidator:
     def fit_classifier(self,
                        dictionary_of_data_chunks: Dict[str, DataFrame],
                        number_of_k_fold: int = 5,
+                       num_batches_of_bad_joins: int = 1,
                        random_state: int = None,
                        ) -> None:
         """ Train the outlier detection model using the given data.
