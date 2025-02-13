@@ -44,14 +44,14 @@ def _setup_training_data(dictionary_of_data_chunks: Dict[str, DataFrame],
         True
     """
 
-    correct_joins, incorrect_joins = [], []
+    correct_parts, shuffled_parts = [], []
     for _, dataset_chunk in dictionary_of_data_chunks.items():
-        correct_joins.append(dataset_chunk.sample(frac=num_batches_of_bad_joins, random_state=0, replace=True).reset_index(drop=True))
-        incorrect_joins.append(dataset_chunk.sample(frac=num_batches_of_bad_joins, random_state=random_state, replace=True).reset_index(drop=True))
+        correct_parts.append(dataset_chunk.sample(frac=num_batches_of_bad_joins, random_state=0, replace=True).reset_index(drop=True))
+        shuffled_parts.append(dataset_chunk.sample(frac=num_batches_of_bad_joins, random_state=random_state, replace=True).reset_index(drop=True))
         if random_state is not None: random_state += 1
-
-    correct_joins = pd.concat(correct_joins, axis=1, ignore_index=True)
-    incorrect_joins = pd.concat(incorrect_joins, axis=1, ignore_index=True)
+    
+    correct_joins = pd.concat(correct_parts, axis=1, ignore_index=True)
+    incorrect_joins = pd.concat(shuffled_parts, axis=1, ignore_index=True)
 
     train_labels = [1]*len(correct_joins)+[negative_class]*len(incorrect_joins)
 
