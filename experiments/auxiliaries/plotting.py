@@ -49,14 +49,15 @@ def make_relative_derviation_histogram(datasets: List[str], models):
     dict_data_names = {
         # "corr_mat_diff" : "Correlation matrix difference",
         "auroc" : "AUROC difference",
-        "cls_F1_diff" : "F1 score difference",
-        "cls_F1_diff_hout" : "F1 score difference (holdout)",
+        "avg_F1_diff" : "F1 score difference",
+        "avg_F1_diff_hout" : "F1 score difference (holdout)",
         "eps_identif_risk" : "Epsilon identifiability risk",
         "priv_loss_eps" : "Privacy loss (in eps. risk)",
         "mia_recall": "MIA recall"
     }
 
-    df_results = _construct_dataframe(datasets, models, metrics=dict_data_names.keys())
+    df_results = _construct_dataframe(datasets, models, metrics=dict_data_names.keys()).reset_index(drop=True)
+
     fig, ax = plt.subplots(figsize=(12, 4))
     
     colors = sns.color_palette("rocket", n_colors=len(datasets))
@@ -101,8 +102,8 @@ def make_relative_derviation_histogram(datasets: List[str], models):
     # ax.set_title("Results for different metrics on datasets using mixed model, DP-GAN and Synthpop")
     
     # visualizing illustration
-    plt.savefig('experiments/results/figures/metrics_results_for_mixed_model.png', dpi=300, bbox_inches='tight')
-    plt.savefig('experiments/results/figures/metrics_results_for_mixed_model.pdf', dpi=300, bbox_inches='tight')
+    plt.savefig('experiments/figures/figure4_mixed_model_other_datasets.png', dpi=300, bbox_inches='tight')
+    plt.savefig('experiments/figures/figure4_mixed_model_other_datasets.pdf', dpi=300, bbox_inches='tight')
     plt.show()
     pass
 
