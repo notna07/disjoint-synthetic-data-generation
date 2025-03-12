@@ -4,7 +4,7 @@
 
 import pandas as pd
 
-datasets = ['alzheimers', 'breast_cancer', 'cervical_cancer', 'heart', 'hepatitis', 'stroke']
+datasets = ['alzheimers', 'breast_cancer', 'cervical_cancer', 'heart', 'hepatitis', 'stroke', 'diabetic_mellitus']
 
 def load_and_join(df_name: str) -> pd.DataFrame:
     try:
