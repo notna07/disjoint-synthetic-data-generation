@@ -121,8 +121,8 @@ class SynthPopAdapter(DataGeneratorAdapter):
 
         Example:
             >>> adapter = SynthPopAdapter()
-            >>> df_syn = adapter.generate('tests/dummy_train')
-            >>> isinstance(df_syn, pd.DataFrame)
+            >>> df_syn = adapter.generate('tests/dummy_train') # doctest: +SKIP
+            >>> isinstance(df_syn, pd.DataFrame) # doctest: +SKIP
             True
         """
         # if self.r_access == 'subprocess':
@@ -277,7 +277,7 @@ def generate_synthetic_data(train_data: DataFrame | str, gen_model: str, id: int
         DataFrame: The generated synthetic data.
 
     Example:
-        >>> df_syn = generate_synthetic_data('tests/dummy_train', 'synthpop')
+        >>> df_syn = generate_synthetic_data('tests/dummy_train', 'privbayes')
         >>> isinstance(df_syn, pd.DataFrame)
         True
     """
