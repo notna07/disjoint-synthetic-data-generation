@@ -14,10 +14,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 
-from sklearn.preprocessing import MinMaxScaler
 from sklearn.calibration import CalibrationDisplay
 
-from .dataset_manager import DataManager
 from .joining_validator import _setup_training_data, JoiningValidator
 
 rcp = {'font.size': 8, 'font.family': 'sans', "mathtext.fontset": "dejavuserif"}
@@ -90,9 +88,6 @@ def plot_proba_hist(pred, save_dir='.', name = None):
     ### Check if directory exists
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
-
-    # min_max_scaler = MinMaxScaler()
-    # pred = min_max_scaler.fit_transform(pred.reshape(-1, 1)).flatten()
 
     plt.figure(figsize=(6, 3))
     bins = np.linspace(0, 1, 21)
