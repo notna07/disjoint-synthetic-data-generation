@@ -100,7 +100,7 @@ def make_data(models, train_data, test_data, target_vars, num_parts, num_reps, r
     for model_name in models:
         for data_name in train_data.keys():
             missing_items = count_number_of_missing_items(results_file, model_name, data_name, num_parts, num_reps)
-            Parallel(n_jobs=1)(delayed(worker)(item, train_data, test_data, target_vars, results_file, metrics, joining_strategy) for item in missing_items)
+            Parallel(n_jobs=6)(delayed(worker)(item, train_data, test_data, target_vars, results_file, metrics, joining_strategy) for item in missing_items)
     pass
 
 if __name__ == '__main__':
