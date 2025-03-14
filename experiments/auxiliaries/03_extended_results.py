@@ -53,8 +53,17 @@ def worker(df_train: DataFrame, df_test: DataFrame, model: str, id: int, target_
 
             gms = {models[0]: cat_atts, models[1]: num_atts}
 
-            Rf = RandomForestClassifier(n_estimators=100)
-            JS = UsingJoiningValidator(JoiningValidator(Rf, verbose=False), behaviour='adaptive')
+            parameter_grid = {'n_estimators': [10, 50, 100], 
+                              'max_depth': [5, 10, 15, None], 
+                              'criterion': ['gini', 'entropy', 'log_loss']}
+            
+            JV = JoiningValidator(classifier_model_base=RandomForestClassifier(), 
+                                    model_parameter_grid=parameter_grid,  
+                                    calibration_method='sigmoid',
+                                    save_proba=True,
+                                    verbose=False)
+            
+            JS = UsingJoiningValidator(JV, behaviour='adaptive')
 
             dgms = DisjointGenerativeModels(df_train, gms, joining_strategy=JS, worker_id = np.random.randint(0, 100))
             dgms.join_multiplier = 4
@@ -84,7 +93,7 @@ def check_specified_splits_for_mixed_model(models: List[str], data_name_key: str
 
     SE = SynthEval(df_train, df_test, verbose=False)
 
-    results_file = f'experiments/results/mixed_model_results/{models[0]}_{models[1]}_{data_name_key}.csv'
+    results_file = f'experiments/results/other_datasets_adapt/{models[0]}_{models[1]}_{data_name_key}.csv'
 
     # Check if the results file exists
     if os.path.exists(results_file):
@@ -101,7 +110,7 @@ def check_specified_splits_for_mixed_model(models: List[str], data_name_key: str
 if __name__ == '__main__':
     from experiments.auxiliaries.plotting import make_relative_derviation_histogram
 
-    models = ['datasynthesizer', 'dpgan']
+    models = ['synthpop', 'dpgan']
 
     metrics = {
         "pca"       : {},
