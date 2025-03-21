@@ -98,6 +98,18 @@ class DisjointGenerativeModels:
         plot_calibration_curve(self._strategy.join_validator, self.training_data, enc_data, save_dir='plots', save_fig = save)
         pass
 
+    def _make_pred_pointplot(self, holdout_data: DataFrame, save: bool = True) -> None:
+        """ Make prediction point plots for the validator model fit quality"""
+        assert hasattr(self._strategy, 'join_validator'), "No validator model found."
+
+        from .utils.plots import plot_samplespace_distribution
+
+        dm_temp = DataManager(holdout_data, self.used_splits)
+        enc_data = dm_temp.encoded_dataset_dict
+
+        plot_samplespace_distribution(self._strategy.join_validator, self.training_data, enc_data, save_dir='plots', save_fig = save)
+        pass
+
     def _evaluate_splits(self):
         # TODO: Calculate fraction of identical rows between joined data and reference data
         # TODO: Calculate record number difference between joined data and reference data

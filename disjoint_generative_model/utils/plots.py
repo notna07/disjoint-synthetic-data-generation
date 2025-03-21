@@ -17,6 +17,7 @@ from matplotlib.gridspec import GridSpec
 from sklearn.calibration import CalibrationDisplay
 
 from .joining_validator import _setup_training_data, JoiningValidator
+from sklearn.decomposition import PCA
 
 rcp = {'font.size': 8, 'font.family': 'sans', "mathtext.fontset": "dejavuserif"}
 plt.rcParams.update(**rcp)
@@ -47,7 +48,7 @@ def plot_calibration_curve(validator: JoiningValidator,
                                                 color='tab:blue',
                                                 strategy='uniform',
                                                 ax = ax_cal)
-    X_test, y_test = _setup_training_data(holdout_data, 1)
+    X_test, y_test = _setup_training_data(holdout_data, 2)
     disp_test = CalibrationDisplay.from_estimator(validator.model,
                                                 X_test,
                                                 y_test,
@@ -80,6 +81,62 @@ def plot_calibration_curve(validator: JoiningValidator,
         plt.savefig(f'{save_dir}/{name}.png')
         plt.close()
     pass
+
+def plot_samplespace_distribution(validator: JoiningValidator,
+                                training_data: Dict[str, DataFrame], 
+                                holdout_data: Dict[str, DataFrame],
+                                save_dir: str = '.', 
+                                name: str = None,
+                                save_fig: bool = True):
+    """ Plot the calibration curve for the validator model """
+    
+    ### Check if directory exists
+    if  (not os.path.exists(save_dir) and save_fig):
+        os.makedirs(save_dir)
+
+    fig, axes = plt.subplots(1,2,figsize=(12, 6), sharex=True, sharey=True)
+
+    X_train , y_train = _setup_training_data(training_data, 1)
+    y_prob = validator.model.predict_proba(X_train)[:, 1]
+
+    pca = PCA(n_components=2)
+    X_train_pca = pca.fit_transform(X_train)
+
+    X_train['PCA1'] = X_train_pca[:, 0]
+    X_train['PCA2'] = X_train_pca[:, 1]
+    X_train['y_prob'] = y_prob
+    X_train['y'] = y_train
+
+    sns.scatterplot(data=X_train, x="PCA1", y="PCA2", hue='y_prob', style='y', ax=axes[0], palette='vlag', hue_norm=(0, 1))
+    axes[0].grid(True, alpha=0.5)
+    axes[0].set_title('Training set')
+
+    X_test , y_test = _setup_training_data(holdout_data, 1)
+    y_prob = validator.model.predict_proba(X_test)[:, 1]
+
+    X_test_pca = pca.transform(X_test)
+
+    X_test['PCA1'] = X_test_pca[:, 0]
+    X_test['PCA2'] = X_test_pca[:, 1]
+    X_test['y_prob'] = y_prob
+    X_test['y'] = y_test
+
+    sns.scatterplot(data=X_test, x="PCA1", y="PCA2", hue='y_prob', style='y', ax=axes[1], palette='vlag', hue_norm=(0, 1))
+    axes[1].grid(True, alpha=0.5)
+    axes[1].set_title('Holdout set')
+
+    if name is None:
+        name = f'probabilities_plot_{int(time.time())}'
+
+    plt.tight_layout()
+    if not save_fig:
+        return fig
+    else:
+        plt.savefig(f'{save_dir}/{name}.png')
+        plt.close()
+    pass
+
+
 
 
 def plot_proba_hist(pred, save_dir='.', name = None):

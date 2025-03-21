@@ -331,7 +331,7 @@ class OutlierValidator:
 
     Attributes:
         outlier_detector (object): Outlier detection model to use.
-        threshold (float): The threshold for the outlier detection model. Since PyOD is used, threshold decay is set to be negative.
+        threshold (float): The threshold for the outlier detection model.
         flex (float): The flexiblity of the outlier detection model in range [0, 1]. Higher values indicate a more strict behavior.
         verbose (bool): Whether to print information.
     
@@ -375,6 +375,7 @@ class OutlierValidator:
     def fit_classifier(self,
                        dictionary_of_data_chunks: Dict[str, DataFrame],
                        number_of_k_fold: int = 5,
+                       num_batches_of_bad_joins: int = 2,
                        random_state: int = None,
                        ) -> None:
         """ Train the outlier detection model using the given data.
