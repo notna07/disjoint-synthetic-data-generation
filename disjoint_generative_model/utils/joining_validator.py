@@ -169,7 +169,7 @@ class JoiningValidator:
         self.model = fitted_model
         pass
     
-    def validate(self, query_data: DataFrame) -> DataFrame:
+    def validate(self, query_data: DataFrame, max_items: int = None) -> DataFrame:
         """ Validate the given DataFrame using the trained model.
 
         Args:
@@ -191,9 +191,11 @@ class JoiningValidator:
             >>> isinstance(result, pd.DataFrame)
             True
         """
+        max_items = len(query_data) if max_items is None else max_items
+
         pred = self.model.predict_proba(query_data.values)[:,1]
         if self.threshold == "auto":
-            self.threshold = sorted(pred, reverse=True)[int(self.auto_threshold_percentage*len(query_data))]
+            self.threshold = sorted(pred, reverse=True)[int(self.auto_threshold_percentage*max_items)]
             print("Threshold auto-set to:", self.threshold)
 
             if self.save_proba:
@@ -295,7 +297,7 @@ class OneClassValidator:
         if self.verbose: print('Final model trained!')
         pass
 
-    def validate(self, query_data: DataFrame) -> DataFrame:
+    def validate(self, query_data: DataFrame, max_items: int = None) -> DataFrame:
         """ Validate the given DataFrame using the trained model.
 
         Args:
@@ -316,9 +318,11 @@ class OneClassValidator:
             >>> isinstance(result, pd.DataFrame)
             True
         """
+        max_items = len(query_data) if max_items is None else max_items
+
         pred = 0.5+self.model.decision_function(query_data.values)
         if self.threshold == "auto":
-            self.threshold = sorted(pred, reverse=True)[int(self.auto_threshold_percentage*len(query_data))]
+            self.threshold = sorted(pred, reverse=True)[int(self.auto_threshold_percentage*max_items)]
             print("Threshold auto-set to:", self.threshold)
 
         pred = (pred >= self.threshold).astype(int)
@@ -422,7 +426,7 @@ class OutlierValidator:
         if self.verbose: print('Final model trained!')
         pass
 
-    def validate(self, query_data: DataFrame) -> DataFrame:
+    def validate(self, query_data: DataFrame, max_items: int = None) -> DataFrame:
         """ Validate the given DataFrame using the trained model.
 
         Args:
@@ -443,9 +447,11 @@ class OutlierValidator:
             >>> isinstance(result, pd.DataFrame)
             True
         """
+        max_items = len(query_data) if max_items is None else max_items
+
         pred = -self.model.decision_function(query_data.values)+1 #multiply by -1 to map the scores from [inlier, outlier] => [0, 1] to [outlier, inlier] => [0, 1] for consistency with different framework behaviors. 
         if self.threshold == "auto":
-            self.threshold = sorted(pred, reverse=False)[int(self.auto_threshold_percentage*len(query_data))]
+            self.threshold = sorted(pred, reverse=False)[int(self.auto_threshold_percentage*max_items)]
             print("Threshold auto-set to:", self.threshold)
 
         pred = (pred >= self.threshold).astype(int)

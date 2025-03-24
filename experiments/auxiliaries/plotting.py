@@ -64,7 +64,7 @@ def make_relative_derviation_histogram(datasets: List[str], models):
 
     sns.pointplot(
         data=df_results[df_results['model']=='dgms'], x="metric", y="value", hue="dataset",
-        dodge=.8 - .8 / len(datasets), palette=colors, errorbar="se", errwidth=1, capsize=0.05,
+        dodge=.8 - .8 / len(datasets), palette=colors, errorbar="se", err_kws={'linewidth': 1}, capsize=0.05,
         markers="*", markersize=8, linestyle="none", ax=ax
     )
     sns.stripplot(
@@ -73,12 +73,12 @@ def make_relative_derviation_histogram(datasets: List[str], models):
     )
     sns.pointplot(
         data=df_results[df_results['model']==models[1]], x="metric", y="value", hue="dataset",
-        dodge=.8 - .8 / len(datasets), palette=colors, errorbar="se", errwidth=1, capsize=0.05,
+        dodge=.8 - .8 / len(datasets), palette=colors, errorbar="se", err_kws={'linewidth': 1}, capsize=0.05,
         markers="^", markersize=6, linestyle="none", ax=ax
     )
     sns.pointplot(
         data=df_results[df_results['model']==models[0]], x="metric", y="value", hue="dataset",
-        dodge=.8 - .8 / len(datasets), palette=colors, errorbar="se", errwidth=1, capsize=0.05,
+        dodge=.8 - .8 / len(datasets), palette=colors, errorbar="se", err_kws={'linewidth': 1}, capsize=0.05,
         markers="s", markersize=6, linestyle="none", ax=ax
     )
     
@@ -88,7 +88,7 @@ def make_relative_derviation_histogram(datasets: List[str], models):
     # setting the custom legend with only the model names and the marker types
 
     custom_lines = [
-        Line2D([0], [0], color=colors[0], marker='*', linestyle='None', linewidth=2, markersize=8, label='Mixed Model'),
+        Line2D([0], [0], color=colors[0], marker='*', linestyle='None', linewidth=2, markersize=8, label='ds-dpgan DGM'),
         Line2D([0], [0], color=colors[0], marker='^', linestyle='None', markersize=8, label='DP-GAN'),
         Line2D([0], [0], color=colors[0], marker='s', linestyle='None', markersize=8, label='DataSynthesizer')
     ]

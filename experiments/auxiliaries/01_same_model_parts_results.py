@@ -120,7 +120,7 @@ if __name__ == '__main__':
 
     joining_strategy = 'concat'
 
-    models = ['synthpop','datasynthesizer', 'ctgan']
+    models = ['synthpop', 'datasynthesizer', 'ctgan']
 
     train_data = {
         'al':pd.read_csv('experiments/datasets/alzheimers_train.csv'),
