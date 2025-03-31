@@ -4,6 +4,7 @@
 
 import os
 import time
+import copy
 import numpy as np
 import pandas as pd
 
@@ -15,6 +16,7 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 
 from sklearn.calibration import CalibrationDisplay
+from sklearn.metrics import brier_score_loss, f1_score, log_loss, precision_score, recall_score, roc_auc_score
 
 from .joining_validator import _setup_training_data, JoiningValidator
 from sklearn.decomposition import PCA
@@ -23,9 +25,26 @@ rcp = {'font.size': 8, 'font.family': 'sans', "mathtext.fontset": "dejavuserif"}
 plt.rcParams.update(**rcp)
 
 
+def _score_validator(validator: JoiningValidator, X_train: DataFrame, y_train: List, X_test: DataFrame, y_test: List):
+
+    y_prob = validator.predict_proba(X_test)
+    y_pred = validator.predict(X_test)
+
+    labs = ['Brier loss', 'Log loss', 'AUC', 'Precision', 'Recall', 'F1']
+    vals = [[brier_score_loss(y_test, y_prob[:, 1])],
+            [log_loss(y_test, y_prob)],
+            [roc_auc_score(y_test, y_prob[:, 1])],
+            [precision_score(y_test, y_pred)],
+            [recall_score(y_test, y_pred)],
+            [f1_score(y_test, y_pred)]]
+
+    vals = [[round(val, 3) for val in row] for row in vals]
+    return vals, labs
+
 def plot_calibration_curve(validator: JoiningValidator,
                            training_data: Dict[str, DataFrame], 
                            holdout_data: Dict[str, DataFrame],
+                           stats: bool = True,
                            save_dir: str = '.', 
                            name: str = None,
                            save_fig: bool = True):
@@ -59,7 +78,7 @@ def plot_calibration_curve(validator: JoiningValidator,
                                                 ax = ax_cal)
 
     ax_cal.grid(True, alpha=0.5)
-
+    
     ax_prob_train = fig.add_subplot(gs[2, 0])
     ax_prob_train.hist(disp_train.y_prob, bins=10, range=(0, 1), color='tab:blue')
     ax_prob_train.set_ylabel("Count")
@@ -70,6 +89,19 @@ def plot_calibration_curve(validator: JoiningValidator,
     ax_prob_test.hist(disp_test.y_prob, bins=10, range=(0, 1), color='tab:orange')
     ax_prob_test.set_xlabel("Mean predicted probability")
     ax_prob_test.grid(axis='y', alpha=0.5)
+
+    if stats:
+        tab_dat, tab_lab = _score_validator(validator.model, X_train, y_train, X_test, y_test)
+
+        ax_cal.legend(loc=[0.48, 0.02], fontsize=8)
+        table = ax_cal.table(cellText=tab_dat,
+                                rowLabels=tab_lab,
+                                loc='lower right',
+                                cellLoc='right',
+                                edges='closed',
+                                bbox=[0.89, 0.02, 0.1, 0.3])  # Adjust bbox as needed for positioning
+        table.auto_set_font_size(False)
+        table.set_fontsize(8)
 
     if name is None:
         name = f'calibration_curve_{int(time.time())}'

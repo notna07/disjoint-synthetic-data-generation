@@ -73,7 +73,7 @@ def model_experiment(df_train: DataFrame, df_test: DataFrame, label: str, model:
 
     return results
 
-def _single_mixed_model_experiment(df_train: DataFrame, gms: Dict[str, List[str]], id) -> DataFrame:
+def _single_mixed_model_experiment(df_train: DataFrame, gms: List[str], parts: Dict[str, List[str]], id) -> DataFrame:
     """ Function to do runs of the mixed model. """
     parameter_grid = {'n_estimators': [10, 50, 100], 'max_depth': [5, 10, 15, None], 'criterion': ['gini', 'entropy', 'log_loss']}
     JV = JoiningValidator(classifier_model_base=RandomForestClassifier(), 
@@ -83,7 +83,7 @@ def _single_mixed_model_experiment(df_train: DataFrame, gms: Dict[str, List[str]
                           verbose=False)
     JS = UsingJoiningValidator(JV, behaviour='adaptive')
 
-    dgms = DisjointGenerativeModels(df_train, gms, joining_strategy=JS, worker_id=id*10)
+    dgms = DisjointGenerativeModels(df_train, gms, parts, joining_strategy=JS, worker_id=id*10)
     dgms.join_multiplier = 4    # to ensure high enough resolution
 
     df_dgms = dgms.fit_generate()
@@ -96,7 +96,8 @@ def mixed_model_experiment(df_train: DataFrame, df_test: DataFrame, model1: str,
     
     SE = SynthEval(df_train, df_test, verbose=False)
     
-    gms = {model1: cat_atts, model2: num_atts}
+    gms = [model1, model2]
+    parts = {'part1': cat_atts, 'part2': num_atts}
     dfs_list = Parallel(n_jobs=-1)(delayed(_single_mixed_model_experiment)(df_train, gms, id=i) for i in range(NUM_REPS))
     dfs = {f"rep_{i}": df_synth for i, df_synth in enumerate(dfs_list)}
 

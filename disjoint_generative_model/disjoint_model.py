@@ -3,8 +3,6 @@
 # Version: 0.1
 # Author : Anton D. Lautrup
 
-import copy
-
 from pandas import DataFrame
 from typing import Dict, List
 
@@ -80,7 +78,9 @@ class DisjointGenerativeModels:
             self.num_samples = len(self.original_data)
 
         if hasattr(self._strategy, 'join_validator'):
-            self._strategy.join_validator.fit_classifier(self.training_data, num_batches_of_bad_joins=2)
+            if self._strategy.join_validator.pre_fit is False:
+                self._strategy.join_validator.fit_classifier(self.training_data, num_batches_of_bad_joins=2)
+                self._strategy.join_validator.pre_fit = True
             self._strategy.max_size = int(self.num_samples)
             self.num_samples = int(self.join_multiplier*self.num_samples)   # multiplier of three seems to do well enough
 
@@ -88,7 +88,7 @@ class DisjointGenerativeModels:
             self.generative_models = list(self.generative_models.keys())
         pass
 
-    def _make_calibration_plot(self, holdout_data: DataFrame, save: bool = True) -> None:
+    def _make_calibration_plot(self, holdout_data: DataFrame, stats: bool = True, save: bool = True) -> None:
         """ Make calibration plots for the validator model fit quality"""
         assert hasattr(self._strategy, 'join_validator'), "No validator model found."
 
@@ -97,7 +97,7 @@ class DisjointGenerativeModels:
         dm_temp = DataManager(holdout_data, self.used_splits)
         enc_data = dm_temp.encoded_dataset_dict
 
-        plot_calibration_curve(self._strategy.join_validator, self.training_data, enc_data, save_dir='plots', save_fig = save)
+        plot_calibration_curve(self._strategy.join_validator, self.training_data, enc_data, stats = stats, save_dir='plots', save_fig = save)
         pass
 
     def _make_pred_pointplot(self, holdout_data: DataFrame, save: bool = True) -> None:

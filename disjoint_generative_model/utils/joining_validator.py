@@ -94,6 +94,7 @@ class JoiningValidator:
         self.threshold = 0.5
         self.auto_threshold_percentage = None
         self.save_proba = save_proba
+        self.pre_fit = False
         self.verbose = verbose
         pass
 
@@ -138,7 +139,7 @@ class JoiningValidator:
 
         if self.params is not None:
             if self.verbose: print("Validator: Grid search for hyperparameters")
-            grid_search = GridSearchCV(estimator=base_model, param_grid=self.params, n_jobs=-1, cv=number_of_validation_folds, scoring='neg_brier_score')#"balanced_accuracy")#
+            grid_search = GridSearchCV(estimator=base_model, param_grid=self.params, n_jobs=-1, cv=number_of_validation_folds)#scoring='neg_brier_score')#"balanced_accuracy")#
             grid_result = grid_search.fit(df_join_train, train_labels)
 
             if self.verbose: print("Validator: Best Brier score %f using %s" % (grid_result.best_score_, grid_result.best_params_))
@@ -169,7 +170,7 @@ class JoiningValidator:
         self.model = fitted_model
         pass
     
-    def validate(self, query_data: DataFrame, max_items: int = None) -> DataFrame:
+    def validate(self, query_data: DataFrame) -> DataFrame:
         """ Validate the given DataFrame using the trained model.
 
         Args:
@@ -191,11 +192,10 @@ class JoiningValidator:
             >>> isinstance(result, pd.DataFrame)
             True
         """
-        max_items = len(query_data) if max_items is None else max_items
 
         pred = self.model.predict_proba(query_data.values)[:,1]
         if self.threshold == "auto":
-            self.threshold = sorted(pred, reverse=True)[int(self.auto_threshold_percentage*max_items)]
+            self.threshold = sorted(pred, reverse=True)[int(self.auto_threshold_percentage*len(query_data))]
             print("Threshold auto-set to:", self.threshold)
 
             if self.save_proba:
@@ -235,6 +235,7 @@ class OneClassValidator:
         self.threshold = 0.5
         self.auto_threshold_percentage = None
         self.verbose = verbose
+        self.pre_fit = False
         pass
 
     def get_standard_behavior(self) -> Dict:
@@ -297,7 +298,7 @@ class OneClassValidator:
         if self.verbose: print('Final model trained!')
         pass
 
-    def validate(self, query_data: DataFrame, max_items: int = None) -> DataFrame:
+    def validate(self, query_data: DataFrame) -> DataFrame:
         """ Validate the given DataFrame using the trained model.
 
         Args:
@@ -318,11 +319,10 @@ class OneClassValidator:
             >>> isinstance(result, pd.DataFrame)
             True
         """
-        max_items = len(query_data) if max_items is None else max_items
 
         pred = 0.5+self.model.decision_function(query_data.values)
         if self.threshold == "auto":
-            self.threshold = sorted(pred, reverse=True)[int(self.auto_threshold_percentage*max_items)]
+            self.threshold = sorted(pred, reverse=True)[int(self.auto_threshold_percentage*len(query_data))]
             print("Threshold auto-set to:", self.threshold)
 
         pred = (pred >= self.threshold).astype(int)
@@ -362,6 +362,7 @@ class OutlierValidator:
         self.flex = 0.5
         self.model.contamination = self.flex / 2
         self.verbose = verbose
+        self.pre_fit = False
         pass
 
     def get_standard_behavior(self) -> Dict:
@@ -426,7 +427,7 @@ class OutlierValidator:
         if self.verbose: print('Final model trained!')
         pass
 
-    def validate(self, query_data: DataFrame, max_items: int = None) -> DataFrame:
+    def validate(self, query_data: DataFrame) -> DataFrame:
         """ Validate the given DataFrame using the trained model.
 
         Args:
@@ -447,11 +448,10 @@ class OutlierValidator:
             >>> isinstance(result, pd.DataFrame)
             True
         """
-        max_items = len(query_data) if max_items is None else max_items
 
         pred = -self.model.decision_function(query_data.values)+1 #multiply by -1 to map the scores from [inlier, outlier] => [0, 1] to [outlier, inlier] => [0, 1] for consistency with different framework behaviors. 
         if self.threshold == "auto":
-            self.threshold = sorted(pred, reverse=False)[int(self.auto_threshold_percentage*max_items)]
+            self.threshold = sorted(pred, reverse=False)[int(self.auto_threshold_percentage*len(query_data))]
             print("Threshold auto-set to:", self.threshold)
 
         pred = (pred >= self.threshold).astype(int)

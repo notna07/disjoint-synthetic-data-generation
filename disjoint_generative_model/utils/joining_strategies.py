@@ -198,7 +198,7 @@ class UsingJoiningValidator(JoinStrategy):
                 data[key] = data[key].sample(frac=1).reset_index(drop=True)
             df_attempt = pd.concat(data.values(), axis=1)
 
-            df_attempt_good_joins = self.join_validator.validate(df_attempt, min(self.max_size, len(df_attempt)))
+            df_attempt_good_joins = self.join_validator.validate(df_attempt)
 
             df_attempt_good_joins_idx = list(sorted(df_attempt_good_joins.index))
 
