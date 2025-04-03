@@ -158,7 +158,7 @@ class JoiningValidator:
             y_pred = calibrated_model.predict(df_join_train)
             score_post = f1_score(train_labels, y_pred)
 
-            if score_post < score_pre:
+            if score_post > score_pre:
                 if self.verbose: print(f"Validator: Calibration improved the model from {score_pre:.4f} to {score_post:.4f}")
                 fitted_model = calibrated_model
             else:

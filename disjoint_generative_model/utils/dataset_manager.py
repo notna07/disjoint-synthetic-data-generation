@@ -4,9 +4,14 @@
 
 import warnings
 
-from typing import Dict, List
-from pandas import DataFrame
+import numpy as np
 
+from pandas import DataFrame
+from typing import Dict, List, Literal
+
+from itertools import cycle
+
+from sklearn.cluster import SpectralClustering
 from sklearn.preprocessing import OrdinalEncoder
 
 def random_split_columns(dataset: DataFrame, split_ratios: Dict[str, float], random_state: int = None) -> Dict[str, List[str]]:
@@ -49,6 +54,37 @@ def random_split_columns(dataset: DataFrame, split_ratios: Dict[str, float], ran
         
     return {key: list(frame.columns) for key,frame in split_columns.items()}
 
+def correlated_distribute_columns(dataset: DataFrame, num_partitions: int,  min_size: int = 2, random_state: int = None):
+    """ Partition the columns into sets based on correlation. Highly correlated items are (as much as possible) 
+    placed into *different* partitions, to ensure that the validator models have more to go on.
+
+    Example:
+        >>> import pandas as pd
+        >>> dataset = pd.DataFrame({'A': [1, 2, 3], 'B': [1, 0, 0], 'C': [2, 4, 6]})
+        >>> correlated_distribute_columns(dataset, num_partitions=2, min_size=1, random_state=1)
+        {'split0': ['A'], 'split1': ['B', 'C']}
+    """
+    corr_matrix = dataset.corr().abs()
+    np.fill_diagonal(corr_matrix.values, 0)
+    corr_matrix = corr_matrix.fillna(0)
+    
+    clustering = SpectralClustering(n_clusters=num_partitions, affinity='precomputed', assign_labels='kmeans', random_state=random_state)
+    labels = clustering.fit_predict(1 - corr_matrix)
+    
+    clusters = {}
+    for feature, cluster in zip(dataset.columns, labels):
+        clusters.setdefault(cluster, []).append(feature)
+    
+    # Redistribute features into approximately equal-sized buckets
+    sorted_clusters = sorted(clusters.values(), key=len, reverse=True)
+    partitions = {i: [] for i in range(num_partitions)}
+    partition_cycle = cycle(range(num_partitions))
+
+    for cluster in sorted_clusters:
+        for feature in cluster:
+            partitions[next(partition_cycle)].append(feature)
+    return partitions
+
 class DataManager:
     """
     A class to manage datasets, splitting, and reverse encoding.
@@ -70,7 +106,8 @@ class DataManager:
     """
     def __init__(self, original_dataset: DataFrame, 
                  prepared_splits: Dict[str, List[str]] = None,
-                 num_random_splits: int = 2,
+                 automated_splits: Literal['correlated', 'random'] = 'random',
+                 num_automated_splits: int = 2,
                  random_state: int = None,
                  ):
         """ Initialize the DataManager with the original dataset and optional prepared splits.
@@ -81,6 +118,7 @@ class DataManager:
             num_random_splits (int, optional): The number of random splits to generate if prepared_splits is None. Defaults to 2.
         """
 
+        # Convert categorical columns to numbers using OrdinalEncoder
         self.cats_cols = original_dataset.select_dtypes(include=['object']).columns.tolist()
         if len(self.cats_cols) > 0:
             self.cat_encoder = OrdinalEncoder().fit(original_dataset[self.cats_cols])
@@ -94,9 +132,15 @@ class DataManager:
                 self.column_splits = prepared_splits
             else:
                 self.column_splits = random_split_columns(original_dataset, {f'split{i}': split for i, split in enumerate(prepared_splits.values())}, random_state=random_state)
-                  
         else:
-            self.column_splits = random_split_columns(original_dataset, {f'split{i}': 1 for i in range(num_random_splits)}, random_state=random_state)
+            match automated_splits:
+                case 'correlated':
+                    self.column_splits = correlated_distribute_columns(original_dataset, num_partitions=num_automated_splits, min_size=2, random_state=random_state)
+                case 'random':
+                    self.column_splits = random_split_columns(original_dataset, {f'split{i}': 1 for i in range(num_automated_splits)}, random_state=random_state)
+                case _:
+                    raise ValueError(f"Unknown automated_splits option: {automated_splits}. Use 'correlated' or 'random'.")
+                
         self.encoded_dataset_dict = self._setup_column_splits(self.column_splits)
 
         pass

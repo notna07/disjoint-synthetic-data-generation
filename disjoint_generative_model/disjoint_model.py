@@ -4,7 +4,7 @@
 # Author : Anton D. Lautrup
 
 from pandas import DataFrame
-from typing import Dict, List
+from typing import Dict, List, Literal
 
 from joblib import Parallel, delayed
 
@@ -30,7 +30,7 @@ class DisjointGenerativeModels:
     def __init__(self,
                  training_data,
                  generative_models: List[str | DataGeneratorAdapter] | Dict[str | DataGeneratorAdapter, List[str]],
-                 prepared_splits: Dict[str, List[str]] = None,
+                 prepared_splits: Dict[str, List[str]] | Literal['correlated', 'random'] = None,
                  joining_strategy: JoinStrategy = UsingJoiningValidator(),
                  worker_id: int = 0,
                  ):
@@ -65,11 +65,18 @@ class DisjointGenerativeModels:
 
     def _setup(self):
         """ Perform the initial setup of the data and models."""
+        
         if self.used_splits is None:
             if isinstance(self.generative_models, Dict):
-                self.used_splits = self.generative_models
+                split_kwargs = {'prepared_splits': self.generative_models}
+        elif self.used_splits == 'correlated':
+            split_kwargs = {'automated_splits': 'correlated', 'num_automated_splits': len(self.generative_models)}
+        elif self.used_splits == 'random':
+            split_kwargs = {'automated_splits': 'random', 'num_automated_splits': len(self.generative_models)}
+        else:
+            split_kwargs = {'prepared_splits': self.used_splits}
 
-        self.dm = DataManager(self.original_data.copy(), self.used_splits, len(self.generative_models))
+        self.dm = DataManager(self.original_data.copy(), **split_kwargs)
         
         self.training_data = self.dm.encoded_dataset_dict
         self.used_splits = self.dm.column_splits
