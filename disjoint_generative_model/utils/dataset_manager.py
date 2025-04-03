@@ -77,12 +77,12 @@ def correlated_distribute_columns(dataset: DataFrame, num_partitions: int,  min_
     
     # Redistribute features into approximately equal-sized buckets
     sorted_clusters = sorted(clusters.values(), key=len, reverse=True)
-    partitions = {i: [] for i in range(num_partitions)}
+    partitions = {f'split{i}': [] for i in range(num_partitions)}
     partition_cycle = cycle(range(num_partitions))
 
     for cluster in sorted_clusters:
         for feature in cluster:
-            partitions[next(partition_cycle)].append(feature)
+            partitions[f'split{next(partition_cycle)}'].append(feature)
     return partitions
 
 class DataManager:
