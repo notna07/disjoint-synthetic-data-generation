@@ -139,10 +139,10 @@ class JoiningValidator:
 
         if self.params is not None:
             if self.verbose: print("Validator: Grid search for hyperparameters")
-            grid_search = GridSearchCV(estimator=base_model, param_grid=self.params, n_jobs=-1, cv=number_of_validation_folds)#scoring='neg_brier_score')#"balanced_accuracy")#
+            grid_search = GridSearchCV(estimator=base_model, param_grid=self.params, n_jobs=-1, cv=number_of_validation_folds)
             grid_result = grid_search.fit(df_join_train, train_labels)
 
-            if self.verbose: print("Validator: Best Brier score %f using %s" % (grid_result.best_score_, grid_result.best_params_))
+            if self.verbose: print("Validator: Best score %f using %s" % (grid_result.best_score_, grid_result.best_params_))
             estimator = grid_result.best_estimator_
         else:
             if self.verbose: print("Validator: No search parameters specified. Using default configuration.")
@@ -151,12 +151,12 @@ class JoiningValidator:
         
         y_pred = estimator.predict(df_join_train)
 
-        score_pre = brier_score_loss(train_labels, y_pred)
+        score_pre = f1_score(train_labels, y_pred)
         if self.calibration_method is not None:
             calibrated_model = CalibratedClassifierCV(estimator, cv='prefit', method=self.calibration_method)
             calibrated_model.fit(df_join_train, train_labels)
             y_pred = calibrated_model.predict(df_join_train)
-            score_post = brier_score_loss(train_labels, y_pred)
+            score_post = f1_score(train_labels, y_pred)
 
             if score_post < score_pre:
                 if self.verbose: print(f"Validator: Calibration improved the model from {score_pre:.4f} to {score_post:.4f}")
