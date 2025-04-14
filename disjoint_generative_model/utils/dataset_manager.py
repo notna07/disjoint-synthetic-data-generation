@@ -9,10 +9,26 @@ import numpy as np
 from pandas import DataFrame
 from typing import Dict, List, Literal
 
-from itertools import cycle
-
-from sklearn.cluster import SpectralClustering
+from itertools import product
 from sklearn.preprocessing import OrdinalEncoder
+
+def measure_ratio_of_correlations(df: DataFrame, partitions: Dict[str, List[str]]) -> float:
+    """ Measure the relative size of the correlation between the disjoint parts of the dataset. """
+    corr_matrix = df.corr().abs()
+    corr_matrix = corr_matrix.fillna(0)
+    np.fill_diagonal(corr_matrix.values, 0)
+
+    interior, exterior = 0, 0
+    for (split1, split2) in product(partitions.values(), repeat=2):
+        sub_corr = corr_matrix.loc[split1, split2].values
+
+        if split1 == split2:
+            interior += np.linalg.norm(sub_corr, ord='fro')
+        else:
+            exterior += np.linalg.norm(sub_corr, ord='fro')
+
+    ratio = exterior / interior
+    return ratio
 
 def random_split_columns(dataset: DataFrame, split_ratios: Dict[str, float], random_state: int = None) -> Dict[str, List[str]]:
     """ Randomly split the columns of a dataset into different splits
@@ -54,35 +70,45 @@ def random_split_columns(dataset: DataFrame, split_ratios: Dict[str, float], ran
         
     return {key: list(frame.columns) for key,frame in split_columns.items()}
 
-def correlated_distribute_columns(dataset: DataFrame, num_partitions: int,  min_size: int = 2, random_state: int = None):
+def correlated_distribute_columns(dataset: DataFrame, num_partitions: int):
     """ Partition the columns into sets based on correlation. Highly correlated items are (as much as possible) 
     placed into *different* partitions, to ensure that the validator models have more to go on.
 
     Example:
         >>> import pandas as pd
         >>> dataset = pd.DataFrame({'A': [1, 2, 3], 'B': [1, 0, 0], 'C': [2, 4, 6]})
-        >>> correlated_distribute_columns(dataset, num_partitions=2, min_size=1, random_state=1)
-        {'split0': ['A'], 'split1': ['B', 'C']}
+        >>> correlated_distribute_columns(dataset, num_partitions=2)
+        {'split0': ['A', 'B'], 'split1': ['C']}
     """
     corr_matrix = dataset.corr().abs()
-    np.fill_diagonal(corr_matrix.values, 0)
     corr_matrix = corr_matrix.fillna(0)
     
-    clustering = SpectralClustering(n_clusters=num_partitions, affinity='precomputed', assign_labels='kmeans', random_state=random_state)
-    labels = clustering.fit_predict(1 - corr_matrix)
-    
-    clusters = {}
-    for feature, cluster in zip(dataset.columns, labels):
-        clusters.setdefault(cluster, []).append(feature)
-    
-    # Redistribute features into approximately equal-sized buckets
-    sorted_clusters = sorted(clusters.values(), key=len, reverse=True)
     partitions = {f'split{i}': [] for i in range(num_partitions)}
-    partition_cycle = cycle(range(num_partitions))
+    while corr_matrix.shape[0] > 0:
+        mask = np.triu(np.ones(corr_matrix.shape), k=1).astype(bool)
+        upper_triangle = corr_matrix.where(mask)
 
-    for cluster in sorted_clusters:
-        for feature in cluster:
-            partitions[f'split{next(partition_cycle)}'].append(feature)
+        try:
+            max_corr = upper_triangle.stack().idxmax()
+        except ValueError:
+            # No more nonzero correlations left - assign the remaining features randomly
+            remaining_features = corr_matrix.index.tolist()
+            for i, feature in enumerate(remaining_features):
+                partition = f'split{i % num_partitions}'
+                partitions[partition].append(feature)
+            break
+
+        # remove the features from the correlation matrix
+        corr_matrix = corr_matrix.drop(index=max_corr[0], columns=max_corr[0])
+        corr_matrix = corr_matrix.drop(index=max_corr[1], columns=max_corr[1])
+
+        # add the features to two different random partitions
+        r = np.random.choice(num_partitions, size=2, replace=False)
+        r1 = min(r[0], r[1])
+        r2 = max(r[0], r[1])
+        partitions[f'split{r1}'].append(max_corr[0])
+        partitions[f'split{r2}'].append(max_corr[1])
+    
     return partitions
 
 class DataManager:
@@ -109,6 +135,7 @@ class DataManager:
                  automated_splits: Literal['correlated', 'random'] = 'random',
                  num_automated_splits: int = 2,
                  random_state: int = None,
+                 verbose: bool = True,
                  ):
         """ Initialize the DataManager with the original dataset and optional prepared splits.
 
@@ -135,7 +162,7 @@ class DataManager:
         else:
             match automated_splits:
                 case 'correlated':
-                    self.column_splits = correlated_distribute_columns(original_dataset, num_partitions=num_automated_splits, min_size=2, random_state=random_state)
+                    self.column_splits = correlated_distribute_columns(original_dataset, num_partitions=num_automated_splits)
                 case 'random':
                     self.column_splits = random_split_columns(original_dataset, {f'split{i}': 1 for i in range(num_automated_splits)}, random_state=random_state)
                 case _:
@@ -143,6 +170,8 @@ class DataManager:
                 
         self.encoded_dataset_dict = self._setup_column_splits(self.column_splits)
 
+        ratio = measure_ratio_of_correlations(original_dataset, self.column_splits)
+        if verbose: print(f"DataManager: The exterior correlations are {ratio:.2f} times that of the interiors.")
         pass
 
     def _setup_column_splits(self, prepared_splits: Dict[str, List[str]]) -> Dict[str, DataFrame]:

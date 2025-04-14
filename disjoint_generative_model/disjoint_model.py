@@ -101,7 +101,7 @@ class DisjointGenerativeModels:
 
         from .utils.plots import plot_calibration_curve
 
-        dm_temp = DataManager(holdout_data, self.used_splits)
+        dm_temp = DataManager(holdout_data, self.used_splits, verbose=False)
         enc_data = dm_temp.encoded_dataset_dict
 
         plot_calibration_curve(self._strategy.join_validator, self.training_data, enc_data, stats = stats, save_dir='plots', save_fig = save)
@@ -113,7 +113,7 @@ class DisjointGenerativeModels:
 
         from .utils.plots import plot_samplespace_distribution
 
-        dm_temp = DataManager(holdout_data, self.used_splits)
+        dm_temp = DataManager(holdout_data, self.used_splits, verbose=False)
         enc_data = dm_temp.encoded_dataset_dict
 
         plot_samplespace_distribution(self._strategy.join_validator, self.training_data, enc_data, save_dir='plots', save_fig = save)
@@ -179,7 +179,7 @@ class DisjointGenerativeModels:
         if self._strategy is None:
             self.strategy = Concatenating()
 
-        data = data if data is not None else self.synthetic_data_partitions
+        data = data if data is not None else self.synthetic_data_partitions.copy()
         
         try:
             return self._strategy.join(data.copy())
