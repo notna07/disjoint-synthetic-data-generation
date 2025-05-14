@@ -1,12 +1,10 @@
 # Description: Script for holding simple plotting functions
 # Date: 05-02-2025
-# Author : Anton D. Lautrup
+# Author : Anonymous
 
 import os
 import time
-import copy
 import numpy as np
-import pandas as pd
 
 from typing import Dict, List
 from pandas import DataFrame
@@ -24,9 +22,7 @@ from sklearn.decomposition import PCA
 rcp = {'font.size': 8, 'font.family': 'sans', "mathtext.fontset": "dejavuserif"}
 plt.rcParams.update(**rcp)
 
-
 def _score_validator(validator: JoiningValidator, X_train: DataFrame, y_train: List, X_test: DataFrame, y_test: List):
-
     y_prob = validator.predict_proba(X_test)
     y_pred = validator.predict(X_test)
 
@@ -167,9 +163,6 @@ def plot_samplespace_distribution(validator: JoiningValidator,
         plt.savefig(f'{save_dir}/{name}.png')
         plt.close()
     pass
-
-
-
 
 def plot_proba_hist(pred, save_dir='.', name = None):
     """ Plot a histogram of the predicted probabilities """

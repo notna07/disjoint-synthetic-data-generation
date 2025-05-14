@@ -1,16 +1,16 @@
 # Description: Class for learning and validating joints between records
 # Date: 14-11-2024
-# Author : Anton D. Lautrup
+# Author : Anonymous
+
+import copy
 
 import numpy as np
 import pandas as pd
 
-import copy
-
 from typing import Dict, Literal
 from pandas import DataFrame
 
-from sklearn.metrics import f1_score, brier_score_loss
+from sklearn.metrics import f1_score
 
 from sklearn.model_selection import GridSearchCV, KFold, train_test_split
 from sklearn.calibration import CalibratedClassifierCV
@@ -174,10 +174,10 @@ class JoiningValidator:
         """ Validate the given DataFrame using the trained model.
 
         Args:
-            df_attempt (DataFrame): The DataFrame to validate.
+            query_data (DataFrame): The DataFrame to validate.
 
         Returns:
-            DataFrame: The rows of df_attempt that are predicted to be good joins.
+            DataFrame: The rows of query_data that are predicted to be good joins.
 
         Example:
             >>> from sklearn.linear_model import LogisticRegression
@@ -211,7 +211,6 @@ class OneClassValidator:
 
     Attributes:
         one_class (object): One class classifier model to use.
-        threshold (float): The threshold for the classifier.
         verbose (bool): Whether to print information.
     
     Methods:
@@ -302,10 +301,10 @@ class OneClassValidator:
         """ Validate the given DataFrame using the trained model.
 
         Args:
-            df_attempt (DataFrame): The DataFrame to validate.
+            query_data (DataFrame): The DataFrame to validate.
 
         Returns:
-            DataFrame: The rows of df_attempt that are predicted to be good joins.
+            DataFrame: The rows of query_data that are predicted to be good joins.
 
         Example:
             >>> import numpy as np

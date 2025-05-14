@@ -1,6 +1,6 @@
 # Description: Class for keeping track of the original dataset and for postprocessing the generated dataset
 # Date: 14-11-2024
-# Author : Anton D. Lautrup
+# Author: Anonymous
 
 import warnings
 
@@ -26,7 +26,7 @@ def measure_ratio_of_correlations(df: DataFrame, partitions: Dict[str, List[str]
             interior += np.linalg.norm(sub_corr, ord='fro')
         else:
             exterior += np.linalg.norm(sub_corr, ord='fro')
-
+            
     ratio = exterior / interior
     return ratio
 
@@ -123,12 +123,12 @@ class DataManager:
     Example:
         >>> import pandas as pd
         >>> df = pd.DataFrame({'A': [1, 2], 'B': [3, 4]})
-        >>> dm = DataManager(df, prepared_splits = {'split1': ['A'], 'split2': ['B']})
+        >>> dm = DataManager(df, prepared_splits = {'split1': ['A'], 'split2': ['B']}, verbose=False)
         >>> dm.encoded_dataset_dict['split1'].columns.tolist()
         ['A']
         >>> dm.encoded_dataset_dict['split2'].columns.tolist()
         ['B']
-        >>> dm2 = DataManager(df, num_random_splits=2)
+        >>> dm2 = DataManager(df, num_automated_splits=2, verbose=False)
     """
     def __init__(self, original_dataset: DataFrame, 
                  prepared_splits: Dict[str, List[str]] = None,
@@ -197,7 +197,7 @@ class DataManager:
         Example:
             >>> import pandas as pd
             >>> df = pd.DataFrame({'A': [1, 2], 'B': [3, 4]})
-            >>> dm = DataManager(df, {'split1': ['A'], 'split2': ['B']})
+            >>> dm = DataManager(df, {'split1': ['A'], 'split2': ['B']}, verbose=False)
             >>> generated_df = pd.DataFrame({'B': [7, 8], 'A': [5, 6]})
             >>> postprocessed_df = dm.postprocess(generated_df)
             >>> postprocessed_df.columns.tolist()

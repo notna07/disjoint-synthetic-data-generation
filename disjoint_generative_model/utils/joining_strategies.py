@@ -1,14 +1,13 @@
 # Description: Module for holding joining strategies
 # Date: 18-11-2024
-# Author : Anton D. Lautrup
+# Author : Anonymous
 
-import time
 import warnings
 
 import pandas as pd
 
 from pandas import DataFrame
-from typing import Dict, List, Literal
+from typing import Dict, Literal
 from abc import ABC, abstractmethod
 
 class JoinStrategy(ABC):
