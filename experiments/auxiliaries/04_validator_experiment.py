@@ -1,5 +1,5 @@
 # Description: Script for creating data for using different validators for joining the results of the experiments.
-# Author: Anonymous
+# Author: Anton D. Lautrup
 # Date: 24-01-2025
 
 import os

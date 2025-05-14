@@ -1,5 +1,5 @@
 # Description: Functions to present the results in readible ways. 
-# Author: Anonymous
+# Author: Anton D. Lautrup
 # Date: 17-01-2025
 
 import numpy as np

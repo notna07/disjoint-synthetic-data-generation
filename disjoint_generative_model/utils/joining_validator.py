@@ -1,6 +1,6 @@
 # Description: Class for learning and validating joints between records
+# Author: Anton D. Lautrup
 # Date: 14-11-2024
-# Author : Anonymous
 
 import copy
 

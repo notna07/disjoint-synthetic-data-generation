@@ -1,5 +1,5 @@
 # Description: Script for runing the code of notebook 3 without the process being interrupted.
-# Author: Anonymous
+# Author: Anton D. Lautrup
 # Date: 20-12-2024
 
 ### Imports

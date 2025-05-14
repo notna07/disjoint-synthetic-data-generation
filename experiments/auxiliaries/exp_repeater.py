@@ -1,6 +1,6 @@
 # Description: Function to be imported which takes a function that generates synthetic data 
 #   and repeatedly evaluates it a number of times.
-# Author: Anonymous
+# Author: Anton D. Lautrup
 # Date: 13-01-2025
 
 import time

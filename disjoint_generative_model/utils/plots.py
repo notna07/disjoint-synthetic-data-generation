@@ -1,6 +1,6 @@
 # Description: Script for holding simple plotting functions
+# Author: Anton D. Lautrup
 # Date: 05-02-2025
-# Author : Anonymous
 
 import os
 import time

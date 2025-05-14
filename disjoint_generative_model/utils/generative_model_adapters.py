@@ -1,6 +1,6 @@
 # Description: Script for generating synthetic datasets in a variety of ways
+# Author: Anton D. Lautrup
 # Date: 18-11-2024
-# Author: Anonymous
 
 import os
 import subprocess
