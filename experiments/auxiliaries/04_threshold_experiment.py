@@ -1,5 +1,5 @@
 # Description: Overhaul of the original experiment to be based off the same model
-# Author: Anonymous
+# Author: Anton D. Lautrup
 # Date: 21-03-2025
 
 import os

@@ -1,6 +1,6 @@
 # Description: Class for keeping track of the original dataset and for postprocessing the generated dataset
+# Author: Anton D. Lautrup
 # Date: 14-11-2024
-# Author: Anonymous
 
 import warnings
 

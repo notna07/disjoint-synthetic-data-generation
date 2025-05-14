@@ -1,6 +1,6 @@
 # Description: Script for repeating the results of the previous experiment on 
 #   additional datasets and save to a format that can easily be plotted
-# Author: Anonymous
+# Author: Anton D. Lautrup
 # Date: 11-12-2024
 
 import os

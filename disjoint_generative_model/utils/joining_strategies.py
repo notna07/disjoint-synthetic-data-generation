@@ -1,6 +1,6 @@
 # Description: Module for holding joining strategies
+# Author: Anton D. Lautrup
 # Date: 18-11-2024
-# Author : Anonymous
 
 import warnings
 

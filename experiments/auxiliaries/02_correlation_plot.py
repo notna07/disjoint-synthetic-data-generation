@@ -1,5 +1,5 @@
 # Description: Script repeated random partitions with measuring correlation of the disjoint parts
-# Author: Anonymous
+# Author: Anton D. Lautrup
 # Date: 07-04-2025
 
 import os

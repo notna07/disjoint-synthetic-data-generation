@@ -1,5 +1,5 @@
 # Description: Script for making nice plots for the paper
-# Author: Anonymous
+# Author: Anton D. Lautrup
 # Date: 09-12-2024
 
 import math

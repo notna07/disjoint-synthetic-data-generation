@@ -1,5 +1,5 @@
 # Description: Script for making baselines
-# Author: Anonymous
+# Author: Anton D. Lautrup
 # Date: 28-09-2023
 
 if (!requireNamespace("synthpop", quietly = TRUE)) {

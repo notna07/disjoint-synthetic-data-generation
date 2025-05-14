@@ -1,5 +1,5 @@
 # Description: Script for executing a big loop to make, time, privacy, and utility measurements
-# Author: Anonymous
+# Author: Anton D. Lautrup
 # Date: 27-11-2024
 
 import os
