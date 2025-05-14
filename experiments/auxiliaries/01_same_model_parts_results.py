@@ -1,5 +1,5 @@
 # Description: Script for executing a big loop to make, time, privacy, and utility measurements
-# Author: Anton D. Lautrup
+# Author: Anonymous
 # Date: 27-11-2024
 
 import os
@@ -72,7 +72,7 @@ def worker(iterable: tuple, train_data: Dict[str, DataFrame],  test_data: Dict[s
         else:
             JS = Concatenating()
 
-        dgms = DisjointGenerativeModels(df_train, num_parts*[model_name], joining_strategy=JS, worker_id = num_parts*100+rep_idx*10)
+        dgms = DisjointGenerativeModels(df_train, num_parts*[model_name], joining_strategy=JS, parallel_worker_id = num_parts*100+rep_idx*10)
 
         if joining_strategy == 'adaptive': dgms.join_multiplier = 4
 

@@ -1,5 +1,5 @@
-# Description: Script for generating synthetic dataset using the disjoint generative model
-# Author: Anton D. Lautrup
+# Description: Script for generating synthetic dataset using the disjoint generative model, basis for a CLI in the future.
+# Author: Anonymous
 # Date: 20-11-2024
 
 import os

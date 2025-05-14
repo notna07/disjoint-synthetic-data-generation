@@ -1,5 +1,5 @@
 # Description: Script for executing a big loop to make, time, privacy, and utility measurements
-# Author: Anton D. Lautrup
+# Author: Anonymous
 # Date: 04-04-2025
 
 import os
@@ -90,7 +90,7 @@ def worker(iterable: tuple, df_train: DataFrame,  df_test: DataFrame, target_var
                                                 generative_models=num_parts*[model_name], 
                                                 prepared_splits='correlated',
                                                 joining_strategy=UsingJoiningValidator(JV, behaviour='adaptive'),
-                                                worker_id = num_parts*100+rep_idx*10
+                                                parallel_worker_id = num_parts*100+rep_idx*10
                                                 )
 
         dgms.join_multiplier = 4

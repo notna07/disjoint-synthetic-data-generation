@@ -1,5 +1,5 @@
 # Description: Script repeated random partitions with measuring correlation of the disjoint parts
-# Author: Anton D. Lautrup
+# Author: Anonymous
 # Date: 07-04-2025
 
 import os
@@ -123,7 +123,7 @@ def generate_measurement(model_name: str, dummy_feats_size, dummy_items_size, st
                                     generative_models=2*[model_name], 
                                     prepared_splits=partitions,
                                     joining_strategy=UsingJoiningValidator(JV, behaviour='adaptive'), 
-                                    worker_id = 10*id
+                                    parallel_worker_id = 10*id
                                     )
     
     df_syn_validate = dgms.fit_generate()

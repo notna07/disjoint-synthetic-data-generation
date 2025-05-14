@@ -1,6 +1,6 @@
 # Description: Disjoint Generative Model Manager Class
 # Date: 14-11-2024
-# Version: 1.0
+# Version: 0.1.0
 # Author : Anonymous
 # License: MIT
 

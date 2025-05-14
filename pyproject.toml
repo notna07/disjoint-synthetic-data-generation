@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "disjointgms"
 version = "0.1.0"
-authors = [{name="Anton D. Lautrup"}]
+authors = [{name="Anonymous"}]
 dependencies = [
     "numpy",
     "pandas",
