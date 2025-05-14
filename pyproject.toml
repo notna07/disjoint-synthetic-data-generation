@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "disjointgms"
 version = "0.1.0"
-authors = [{name="Anton D. Lautrup"}]
+authors = [{name="Anonymous"}]
 dependencies = [
     "numpy",
     "pandas",
@@ -19,7 +19,7 @@ dependencies = [
 ]
 description = "Exploring the Effects of Disjoint Generation of Synthetic Tabular Data."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",

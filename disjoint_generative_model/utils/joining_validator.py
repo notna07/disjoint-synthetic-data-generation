@@ -1,16 +1,16 @@
 # Description: Class for learning and validating joints between records
 # Date: 14-11-2024
-# Author : Anton D. Lautrup
+# Author : Anonymous
+
+import copy
 
 import numpy as np
 import pandas as pd
 
-import copy
-
 from typing import Dict, Literal
 from pandas import DataFrame
 
-from sklearn.metrics import f1_score, brier_score_loss
+from sklearn.metrics import f1_score
 
 from sklearn.model_selection import GridSearchCV, KFold, train_test_split
 from sklearn.calibration import CalibratedClassifierCV
@@ -44,14 +44,14 @@ def _setup_training_data(dictionary_of_data_chunks: Dict[str, DataFrame],
         True
     """
 
-    correct_joins, incorrect_joins = [], []
+    correct_parts, shuffled_parts = [], []
     for _, dataset_chunk in dictionary_of_data_chunks.items():
-        correct_joins.append(dataset_chunk.sample(frac=num_batches_of_bad_joins, random_state=0, replace=True).reset_index(drop=True))
-        incorrect_joins.append(dataset_chunk.sample(frac=num_batches_of_bad_joins, random_state=random_state, replace=True).reset_index(drop=True))
+        correct_parts.append(dataset_chunk.sample(frac=num_batches_of_bad_joins, random_state=0, replace=True).reset_index(drop=True))
+        shuffled_parts.append(dataset_chunk.sample(frac=num_batches_of_bad_joins, random_state=random_state, replace=True).reset_index(drop=True))
         if random_state is not None: random_state += 1
-
-    correct_joins = pd.concat(correct_joins, axis=1, ignore_index=True)
-    incorrect_joins = pd.concat(incorrect_joins, axis=1, ignore_index=True)
+    
+    correct_joins = pd.concat(correct_parts, axis=1, ignore_index=True)
+    incorrect_joins = pd.concat(shuffled_parts, axis=1, ignore_index=True)
 
     train_labels = [1]*len(correct_joins)+[negative_class]*len(incorrect_joins)
 
@@ -94,6 +94,7 @@ class JoiningValidator:
         self.threshold = 0.5
         self.auto_threshold_percentage = None
         self.save_proba = save_proba
+        self.pre_fit = False
         self.verbose = verbose
         pass
 
@@ -138,10 +139,10 @@ class JoiningValidator:
 
         if self.params is not None:
             if self.verbose: print("Validator: Grid search for hyperparameters")
-            grid_search = GridSearchCV(estimator=base_model, param_grid=self.params, n_jobs=-1, cv=number_of_validation_folds, scoring='neg_brier_score')#"balanced_accuracy")#
+            grid_search = GridSearchCV(estimator=base_model, param_grid=self.params, n_jobs=-1, cv=number_of_validation_folds)
             grid_result = grid_search.fit(df_join_train, train_labels)
 
-            if self.verbose: print("Validator: Best Brier score %f using %s" % (grid_result.best_score_, grid_result.best_params_))
+            if self.verbose: print("Validator: Best score %f using %s" % (grid_result.best_score_, grid_result.best_params_))
             estimator = grid_result.best_estimator_
         else:
             if self.verbose: print("Validator: No search parameters specified. Using default configuration.")
@@ -150,14 +151,14 @@ class JoiningValidator:
         
         y_pred = estimator.predict(df_join_train)
 
-        score_pre = brier_score_loss(train_labels, y_pred)
+        score_pre = f1_score(train_labels, y_pred)
         if self.calibration_method is not None:
             calibrated_model = CalibratedClassifierCV(estimator, cv='prefit', method=self.calibration_method)
             calibrated_model.fit(df_join_train, train_labels)
             y_pred = calibrated_model.predict(df_join_train)
-            score_post = brier_score_loss(train_labels, y_pred)
+            score_post = f1_score(train_labels, y_pred)
 
-            if score_post < score_pre:
+            if score_post > score_pre:
                 if self.verbose: print(f"Validator: Calibration improved the model from {score_pre:.4f} to {score_post:.4f}")
                 fitted_model = calibrated_model
             else:
@@ -173,10 +174,10 @@ class JoiningValidator:
         """ Validate the given DataFrame using the trained model.
 
         Args:
-            df_attempt (DataFrame): The DataFrame to validate.
+            query_data (DataFrame): The DataFrame to validate.
 
         Returns:
-            DataFrame: The rows of df_attempt that are predicted to be good joins.
+            DataFrame: The rows of query_data that are predicted to be good joins.
 
         Example:
             >>> from sklearn.linear_model import LogisticRegression
@@ -191,6 +192,7 @@ class JoiningValidator:
             >>> isinstance(result, pd.DataFrame)
             True
         """
+
         pred = self.model.predict_proba(query_data.values)[:,1]
         if self.threshold == "auto":
             self.threshold = sorted(pred, reverse=True)[int(self.auto_threshold_percentage*len(query_data))]
@@ -209,7 +211,6 @@ class OneClassValidator:
 
     Attributes:
         one_class (object): One class classifier model to use.
-        threshold (float): The threshold for the classifier.
         verbose (bool): Whether to print information.
     
     Methods:
@@ -233,6 +234,7 @@ class OneClassValidator:
         self.threshold = 0.5
         self.auto_threshold_percentage = None
         self.verbose = verbose
+        self.pre_fit = False
         pass
 
     def get_standard_behavior(self) -> Dict:
@@ -250,6 +252,7 @@ class OneClassValidator:
     def fit_classifier(self,
                        dictionary_of_data_chunks: Dict[str, DataFrame],
                        number_of_k_fold: int = 5,
+                       num_batches_of_bad_joins: int = 1,
                        random_state: int = None,
                        ) -> None:
         """ Train the outlier detection model using the given data.
@@ -298,10 +301,10 @@ class OneClassValidator:
         """ Validate the given DataFrame using the trained model.
 
         Args:
-            df_attempt (DataFrame): The DataFrame to validate.
+            query_data (DataFrame): The DataFrame to validate.
 
         Returns:
-            DataFrame: The rows of df_attempt that are predicted to be good joins.
+            DataFrame: The rows of query_data that are predicted to be good joins.
 
         Example:
             >>> import numpy as np
@@ -315,6 +318,7 @@ class OneClassValidator:
             >>> isinstance(result, pd.DataFrame)
             True
         """
+
         pred = 0.5+self.model.decision_function(query_data.values)
         if self.threshold == "auto":
             self.threshold = sorted(pred, reverse=True)[int(self.auto_threshold_percentage*len(query_data))]
@@ -330,7 +334,7 @@ class OutlierValidator:
 
     Attributes:
         outlier_detector (object): Outlier detection model to use.
-        threshold (float): The threshold for the outlier detection model. Since PyOD is used, threshold decay is set to be negative.
+        threshold (float): The threshold for the outlier detection model.
         flex (float): The flexiblity of the outlier detection model in range [0, 1]. Higher values indicate a more strict behavior.
         verbose (bool): Whether to print information.
     
@@ -357,6 +361,7 @@ class OutlierValidator:
         self.flex = 0.5
         self.model.contamination = self.flex / 2
         self.verbose = verbose
+        self.pre_fit = False
         pass
 
     def get_standard_behavior(self) -> Dict:
@@ -374,6 +379,7 @@ class OutlierValidator:
     def fit_classifier(self,
                        dictionary_of_data_chunks: Dict[str, DataFrame],
                        number_of_k_fold: int = 5,
+                       num_batches_of_bad_joins: int = 2,
                        random_state: int = None,
                        ) -> None:
         """ Train the outlier detection model using the given data.
@@ -441,6 +447,7 @@ class OutlierValidator:
             >>> isinstance(result, pd.DataFrame)
             True
         """
+
         pred = -self.model.decision_function(query_data.values)+1 #multiply by -1 to map the scores from [inlier, outlier] => [0, 1] to [outlier, inlier] => [0, 1] for consistency with different framework behaviors. 
         if self.threshold == "auto":
             self.threshold = sorted(pred, reverse=False)[int(self.auto_threshold_percentage*len(query_data))]
