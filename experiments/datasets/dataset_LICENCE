@@ -1,0 +1,10 @@
+# The datasets we include here for reproducibility purposes have the following licences
+# We ask that these licences be respected if the datasets from here are used in any other context.
+# - [Alzheimer's disease](https://www.kaggle.com/datasets/rabieelkharoua/alzheimers-disease-dataset) - Kaggle, CC-BY-4.0
+# - [Breast cancer](https://www.kaggle.com/datasets/reihanenamdari/breast-cancer/) - Kaggle, CC-BY-4.0
+# - [Cervical cancer](https://archive.ics.uci.edu/dataset/383/cervical+cancer+risk+factors) - UCI ML Repository, CC-BY-4.0
+# - [Diabetic Mellitus](https://www.openml.org/search?type=data\&status=active\&id=41430) - OpenML, CC-0
+# - [Heart Disease](https://archive.ics.uci.edu/dataset/45/heart+disease) - UCI ML Repository, CC-BY-4.0
+# - [Hepatitis](https://archive.ics.uci.edu/dataset/503/hepatitis+c+virus+hcv+for+egyptian+patients) - UCI ML Repository, CC-BY-4.0
+# - [Kidney disease](https://archive.ics.uci.edu/dataset/336/chronic+kidney+disease) - UCI ML Repository, CC-BY-4.0
+# - [Stroke](https://www.kaggle.com/datasets/fedesoriano/stroke-prediction-dataset) - Kaggle, (~CC-BY) The author says to use freely for research with link reference

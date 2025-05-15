@@ -29,14 +29,14 @@ Below is codebooks that can be used to replicate the results shown in the paper.
 Additional examples for how to use the library can be seen in the documentation in the source code folder. 
 
 ## Requirements
-The library requires Python 3.10 or higher and the following packages:
-- numpy
-- pandas
+The library requires Python 3.10 (we use version 3.10.12) and the following packages:
+- numpy ~= 1.26
+- pandas ~= 2.2.3
 - scipy ~= 1.12
 - scikit-learn ~= 1.5
 - synthcity >= 0.2.11
 - DataSynthesizer ~= 0.1.13
 - pyod >= 2.0
 
-Additonally, the synthpop generative model is accessed through R, and requires the following R packages:
-- synthpop
+Additonally, the synthpop generative model is accessed through R (we used version 4.1.2), and requires the following R packages:
+- synthpop ~= 1.8.0
