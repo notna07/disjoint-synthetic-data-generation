@@ -1,6 +1,7 @@
 numpy
 pandas
 scipy ~= 1.12
+torch == 2.2.2
 scikit-learn ~= 1.5
 syntheval >= 1.6.0
 synthcity == 0.2.12
