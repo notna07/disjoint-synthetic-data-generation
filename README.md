@@ -11,7 +11,7 @@ The library provides a simple API for generating synthetic data using a variety 
  To install the library, run the following command:
 
 ```bash
-pip install 
+pip install disjoint-generation
 ```
 One of the generative model backends "synthpop" requires a working R installation on the system. Access is handled through ```subprocess``` to run an ```Rscript``` command, so make sure that the Rscript command works in the terminal.
 

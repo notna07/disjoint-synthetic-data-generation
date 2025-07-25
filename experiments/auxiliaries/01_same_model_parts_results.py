@@ -18,10 +18,10 @@ from joblib import Parallel, delayed
 from synthcity.plugins import Plugins
 from sklearn.ensemble import RandomForestClassifier
 
-from disjoint_generative_model import DisjointGenerativeModels
-from disjoint_generative_model.utils.joining_validator import JoiningValidator
-from disjoint_generative_model.utils.joining_strategies import UsingJoiningValidator, Concatenating
-from disjoint_generative_model.utils.generative_model_adapters import generate_synthetic_data
+from disjoint_generation import DisjointGenerativeModels
+from disjoint_generation.utils.joining_validator import JoiningValidator
+from disjoint_generation.utils.joining_strategies import UsingJoiningValidator, Concatenating
+from disjoint_generation.utils.generative_model_adapters import generate_synthetic_data
 
 from syntheval import SynthEval
 

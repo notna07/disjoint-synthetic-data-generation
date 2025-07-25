@@ -16,9 +16,9 @@ from typing import Dict, List
 from itertools import product
 from joblib import Parallel, delayed
 
-from disjoint_generative_model.utils.joining_validator import JoiningValidator, OneClassValidator, OutlierValidator
-from disjoint_generative_model.utils.joining_strategies import UsingJoiningValidator, Concatenating
-from disjoint_generative_model import DisjointGenerativeModels
+from disjoint_generation.utils.joining_validator import JoiningValidator, OneClassValidator, OutlierValidator
+from disjoint_generation.utils.joining_strategies import UsingJoiningValidator, Concatenating
+from disjoint_generation import DisjointGenerativeModels
 
 from syntheval import SynthEval
 

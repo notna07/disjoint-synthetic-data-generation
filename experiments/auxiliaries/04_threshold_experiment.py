@@ -10,8 +10,8 @@ sys.path.append('.')
 import numpy as np
 import pandas as pd
 
-from disjoint_generative_model import DisjointGenerativeModels
-from disjoint_generative_model.utils.joining_strategies import UsingJoiningValidator, Concatenating
+from disjoint_generation import DisjointGenerativeModels
+from disjoint_generation.utils.joining_strategies import UsingJoiningValidator, Concatenating
 
 from syntheval import SynthEval
 

@@ -19,9 +19,9 @@ from joblib import Parallel, delayed
 
 from sklearn.ensemble import RandomForestClassifier
 
-from disjoint_generative_model import DisjointGenerativeModels
-from disjoint_generative_model.utils.joining_strategies import UsingJoiningValidator, Concatenating
-from disjoint_generative_model.utils.joining_validator import JoiningValidator
+from disjoint_generation import DisjointGenerativeModels
+from disjoint_generation.utils.joining_strategies import UsingJoiningValidator, Concatenating
+from disjoint_generation.utils.joining_validator import JoiningValidator
 
 def measure_correlation(df: DataFrame, variables1: List[str], variables2: List[str]) -> float:
     """ Measure the correlation of the disjoint parts of the dataset. """

@@ -114,7 +114,7 @@ adaptive_behaviour = {
     'auto_threshold_percentage': 0.1
 }
 
-from disjoint_generative_model.utils.joining_validator import JoiningValidator, OneClassValidator, OutlierValidator
+from disjoint_generation.utils.joining_validator import JoiningValidator, OneClassValidator, OutlierValidator
 class UsingJoiningValidator(JoinStrategy):
     """ Concrete Strategy for joining dataframes using a JoiningValidator model."""
     def __init__(self, join_validator_model: JoiningValidator | OneClassValidator | OutlierValidator = JoiningValidator(verbose=False),

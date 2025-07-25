@@ -105,6 +105,7 @@ class SynthCityAdapter(DataGeneratorAdapter):
 
         return df_syn[:num_to_generate]
 
+from importlib.resources import files
 class SynthPopAdapter(DataGeneratorAdapter):
     def generate(self, train_data: str | DataFrame, num_to_generate: int = None, seed: int = None, id = 0,  **kwargs) -> DataFrame:
         """ Generate synthetic data using SynthPop in R using subprocess.
@@ -141,9 +142,10 @@ class SynthPopAdapter(DataGeneratorAdapter):
         if not os.path.exists(info_dir):
             os.makedirs(info_dir)
 
+        r_script_path = files('disjoint_generation').joinpath('utils/subprocess/synthpop_subprocess.R')
         command = [
                     "Rscript",
-                    "disjoint_generative_model/utils/subprocess/synthpop_subprocess.R",
+                    str(r_script_path),
                     train_data_name +".csv",
                     train_data_name + "_synthpop",
                     str(num_to_generate) if num_to_generate is not None else str(len(df_train)),

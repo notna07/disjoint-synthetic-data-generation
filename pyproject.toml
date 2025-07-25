@@ -3,8 +3,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "disjointgms"
-version = "0.1.0"
+name = "disjoint_generation"
+version = "1.0"
 authors = [{name="Anton D. Lautrup"},
            {name="Muhammad Rajabinasab"}]
 dependencies = [
@@ -29,12 +29,12 @@ classifiers = [
 
 [tool.hatch.build]
 include = [
-    'disjoint_generative_model',
+    'src/disjoint_generation',
     'LICENSE',
     'README.md',
 ]
 [tool.hatch.build.targets.wheel]
-packages = ["disjoint_generative_model"]
+packages = ["src/disjoint_generation"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
