@@ -11,6 +11,7 @@ import pandas as pd
 from typing import List
 from pandas import DataFrame
 from abc import ABC, abstractmethod
+from importlib.resources import files
 
 from synthcity.plugins import Plugins
 
@@ -105,7 +106,6 @@ class SynthCityAdapter(DataGeneratorAdapter):
 
         return df_syn[:num_to_generate]
 
-from importlib.resources import files
 class SynthPopAdapter(DataGeneratorAdapter):
     def generate(self, train_data: str | DataFrame, num_to_generate: int = None, seed: int = None, id = 0,  **kwargs) -> DataFrame:
         """ Generate synthetic data using SynthPop in R using subprocess.
