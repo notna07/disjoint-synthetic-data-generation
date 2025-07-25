@@ -12,11 +12,11 @@ on:
   push:
     branches: [main]
     paths:
-      - "src/disjoint_generation/**"
+      - "src/**"
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
-      - "src/disjoint_generation/**"
+      - "src/**"
 
 jobs:
   run-doctests:
