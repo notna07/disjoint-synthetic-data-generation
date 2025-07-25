@@ -1,7 +1,7 @@
 # Description: Disjoint Generative Model Manager Class
 # Author: Anton D. Lautrup
 # Date: 14-11-2024
-# Version: 0.1.0
+# Version: 1.0
 # License: MIT
 
 from pandas import DataFrame
