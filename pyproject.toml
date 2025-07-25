@@ -28,6 +28,11 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
+[project.urls]
+"Homepage" = "https://github.com/notna07/disjoint-synthetic-data-generation"
+"Bug Tracker" = "https://github.com/notna07/disjoint-synthetic-data-generation/issues"
+
+
 [tool.hatch.build]
 include = [
     'src/disjoint_generation',
