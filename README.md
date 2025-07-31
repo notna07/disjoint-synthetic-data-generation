@@ -1,3 +1,4 @@
+[![PyPI version](https://badge.fury.io/py/disjoint-generation.svg)](https://badge.fury.io/py/disjoint-generation)
 <!-- [![Doctests](https://github.com/notna07/disjoint-synthetic-data-generation/actions/workflows/doctests.yml/badge.svg)](https://github.com/notna07/disjoint-synthetic-data-generation/actions/workflows/doctests.yml) -->
 
 # Disjoint Generative Models 
@@ -40,3 +41,15 @@ The library requires Python 3.10 (we use version 3.10.12) and the following pack
 
 Additonally, the synthpop generative model is accessed through R (we used version 4.1.2), and requires the following R packages:
 - synthpop ~= 1.8.0
+
+## Citing
+If you use our library in your work, you can reference us by citing our paper:
+```
+@misc{Lautrup2025,
+      title={Disjoint Generative Models}, 
+      author={Anton Danholt Lautrup and Muhammad Rajabinasab and Tobias Hyrup and Arthur Zimek and Peter Schneider-Kamp},
+      year={2025},
+      eprint={2507.19700},
+      archivePrefix={arXiv},
+}
+```
