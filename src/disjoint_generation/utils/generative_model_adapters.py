@@ -255,6 +255,7 @@ def generate_synthetic_data(train_data: DataFrame | str, gen_model: str, num_to_
         'tvae': SynthCityAdapter(gen_model),
         'nflow': SynthCityAdapter(gen_model),
         'ddpm': SynthCityAdapter(gen_model),
+        'arf': SynthCityAdapter(gen_model),
         'dpgan': SynthCityAdapter(gen_model),
         'privbayes': SynthCityAdapter(gen_model),
         'synthpop': SynthPopAdapter(),
