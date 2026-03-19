@@ -44,7 +44,8 @@ def worker(data_name:str, df_train: DataFrame, df_test: DataFrame, model: str, i
         case 'adsgan':
             df_temp = generate_synthetic_data(df_train, model, id = np.random.randint(0, 100))
         case 'ddpm':
-            df_temp = generate_synthetic_data(df_train, model, id = np.random.randint(0, 100), kwargs={'batch_size': 128, 'n_iter': 2000, 'lr': 1e-4, 'is_classification': True})
+            kwargs = pd.read_json(f'experiments/parameter_sets/ddpm.json').to_dict()[data_name]
+            df_temp = generate_synthetic_data(df_train, model, id = np.random.randint(0, 100), **kwargs)
         case _:
             raise ValueError(f"Model {model} not recognized for generating synthetic data.")
 
