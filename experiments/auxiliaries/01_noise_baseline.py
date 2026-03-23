@@ -78,13 +78,13 @@ def add_gaussian_noise(df, degree, seed):
     df_noisy = df.copy()
     rng = np.random.default_rng(seed)
     for col in df.columns:
-        if pd.api.types.is_numeric_dtype(df[col]):
+        if np.issubdtype(df[col].dtype, np.floating):
             std_dev = df[col].std()
             noise = rng.normal(loc=0, scale=std_dev * degree, size=len(df))
             df_noisy[col] += noise
     return df_noisy
 
-def worker(iterable: tuple, train_data: Dict[str, DataFrame],  test_data: Dict[str, DataFrame], target_vars: Dict[str,str], results_file: str, metrics: Dict[str, dict], joining_strategy: str) -> None:
+def worker(iterable: tuple, train_data: Dict[str, DataFrame],  test_data: Dict[str, DataFrame], target_vars: Dict[str,str], results_file: str, metrics: Dict[str, dict]) -> None:
     """ Worker function for generating synthetic data and evaluating it. """
     model_name, exp_name, data_name, degree, rep_idx = iterable
 
@@ -119,14 +119,19 @@ def worker(iterable: tuple, train_data: Dict[str, DataFrame],  test_data: Dict[s
         res.to_csv(results_file, index=False)
     pass
 
-def make_data(models, train_data, test_data, target_vars, experiments, num_reps, results_file, metrics, joining_strategy: str):
+def make_data(models, train_data, test_data, target_vars, experiments, num_reps, results_file, metrics):
     """ Make the data for noisy baselines. """
     
     for model_name in models:
         for exp_name, exp_values in experiments.items():
             for data_name in train_data.keys():
-                missing_items = count_number_of_missing_items(results_file, model_name, exp_name, data_name, exp_values, num_reps)
-                Parallel(n_jobs=6)(delayed(worker)(item, train_data, test_data, target_vars, results_file, metrics, joining_strategy) for item in missing_items)
+                missing_items = list(count_number_of_missing_items(results_file, model_name, exp_name, data_name, exp_values, num_reps))
+                num_tasks = len(missing_items)
+                if num_tasks == 0:
+                    continue
+
+                print(f"[progress] model={model_name} exp={exp_name} data={data_name}: {num_tasks} tasks")
+                Parallel(n_jobs=6)(delayed(worker)(item, train_data, test_data, target_vars, results_file, metrics) for item in missing_items)
     pass
 
 if __name__ == '__main__':
@@ -148,8 +153,6 @@ if __name__ == '__main__':
         "eps_risk"  : {},
         "mia"       : {"num_eval_iter": 5},
     }
-
-    joining_strategy = 'concat'
 
     models = ['synthpop', 'datasynthesizer', 'ctgan']
 
@@ -185,4 +188,4 @@ if __name__ == '__main__':
 
 
     results_file = 'experiments/results/01_noise_baseline.csv'
-    res = make_data(models, train_data, test_data, target_vars, experiments, NUM_REPEATS, results_file, metrics, joining_strategy)
+    res = make_data(models, train_data, test_data, target_vars, experiments, NUM_REPEATS, results_file, metrics)
