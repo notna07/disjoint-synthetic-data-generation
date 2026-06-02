@@ -7,6 +7,7 @@ import time
 import pandas as pd
 
 import sys
+import argparse
 sys.path.append('.')
 
 from typing import Dict
@@ -104,6 +105,9 @@ def make_data(models, train_data, test_data, target_vars, num_parts, num_reps, r
     pass
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--joining_strategy', choices=['concat', 'validate'], default='validate')
+    args = parser.parse_args()
 
     NUM_REPEATS = 10
     MAX_PARTITIONS = 4
@@ -118,7 +122,7 @@ if __name__ == '__main__':
         "mia"       : {"num_eval_iter": 5},
     }
 
-    joining_strategy = 'concat'
+    joining_strategy = args.joining_strategy
 
     models = ['synthpop', 'datasynthesizer', 'ctgan']
 
