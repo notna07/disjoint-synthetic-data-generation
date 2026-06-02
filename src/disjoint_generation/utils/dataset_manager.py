@@ -2,8 +2,6 @@
 # Author: Anton D. Lautrup
 # Date: 14-11-2024
 
-import warnings
-
 import numpy as np
 
 from pandas import DataFrame
@@ -54,7 +52,11 @@ def random_split_columns(dataset: DataFrame, split_ratios: Dict[str, float], ran
     if sum_diff != 0:
         for i in range(sum_diff):
             split_sizes[list(split_sizes.keys())[i]] += 1
-        warnings.warn(f"Split sizes adjusted to {split_sizes}")
+        print(
+            "DGMs (datamanager): Split sizes were adjusted to match the number of columns. "
+            f"requested_ratios={split_ratios}, n_columns={dataset.shape[1]}, "
+            f"adjusted_split_sizes={split_sizes}",
+        )
     
     # Randomly shuffle the columns
     dataset = dataset.sample(frac=1, axis=1, random_state=random_state)
@@ -66,7 +68,7 @@ def random_split_columns(dataset: DataFrame, split_ratios: Dict[str, float], ran
         dataset = dataset.iloc[:, size:]
 
     if dataset.shape[1] > 0:
-        raise Exception(f"Remainder {dataset.columns} of columns were not included in any split!")
+        raise Exception(f"DGMs (datamanager): Remainder {dataset.columns} of columns were not included in any split!")
         
     return {key: list(frame.columns) for key,frame in split_columns.items()}
 
@@ -171,7 +173,7 @@ class DataManager:
         self.encoded_dataset_dict = self._setup_column_splits(self.column_splits)
 
         ratio = measure_ratio_of_correlations(original_dataset, self.column_splits)
-        if verbose: print(f"DataManager: The exterior correlations are {ratio:.2f} times that of the interiors.")
+        if verbose: print(f"DGMs (datamanager): The exterior correlations are {ratio:.2f} times that of the interiors.")
         pass
 
     def _setup_column_splits(self, prepared_splits: Dict[str, List[str]]) -> Dict[str, DataFrame]:

@@ -187,7 +187,7 @@ class DisjointGenerativeModels:
         try:
             return self._strategy.join(data.copy())
         except Exception as e:
-            print(f"Error in joining data: {e}")
+            print(f"DGMs (main): Error in joining data: {e}")
 
 if __name__ == "__main__":
     import doctest
