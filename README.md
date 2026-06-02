@@ -22,10 +22,12 @@ Below is codebooks that can be used to replicate the results shown in the paper.
 | Link | Description | Fig. refs. |
 | --- | --- | --- |
 | [Tutorial](00_tutorial.ipynb) | A simple tutorial on how to use the library | NA |
-| [Codebook 1](01_same_model_partitions.ipynb) | Introductionary experiments, random joining, incresing number of partitions | Fig.2 |
-| [Codebook 2](02_validated_joins.ipynb) | High-dimensional dataset example vith validation, correlated partitions study | Fig. 3, 4, 5 |
-| [Codebook 3](03_specified_splits.ipynb) | Mixed-model generation and combinatorics | Fig. 6, Tab. 2, 3 |
-| [Codebook 4](04_joining_validator.ipynb) | Study of the joining validator model, optimisation and calibration | Fig. 7, 8, 9 |
+| [Codebook 1](01_same_model_partitions.ipynb) | Introductionary experiments, random joining, incresing number of partitions | Fig. 3, 10 |
+| [Codebook 2](02_validated_joins.ipynb) | High-dimensional dataset example vith validation, correlated partitions study | Fig. 4, 5, 6, 13  |
+| [Codebook 3](03_specified_splits.ipynb) | Mixed-model generation and combinatorics | Fig. 7, 8, Tab. 2, 3 |
+| [Codebook 4](04_joining_validator.ipynb) | Study of the joining validator model, optimisation and calibration | Fig. 11, 12, 14 |
+| --- | --- | --- |
+| [TabDiff Baseline](https://github.com/notna07/TabDiff-baseline) | We compare to TabDiff, a state-of-the-art method for synthetic data generation. Our code and adapters for making this baseline work is provided here. | Tab. 3, Fig. 8 |
 
 Additional examples for how to use the library can be seen in the documentation in the source code folder. 
 
@@ -38,6 +40,8 @@ The library requires Python 3.10 (we use version 3.10.12) and the following pack
 - synthcity >= 0.2.11
 - DataSynthesizer ~= 0.1.13
 - pyod >= 2.0
+
+Because Synthcity sometimes causes compatibility issues we also provide an [environment.txt](environment.txt) file with a `pip freeze` of a working installation, which can be installed using `pip install -r environment.txt` and should work on Python ~3.10.11.
 
 Additonally, the synthpop generative model is accessed through R (we used version 4.1.2), and requires the following R packages:
 - synthpop ~= 1.8.0
