@@ -29,6 +29,7 @@ jobs:
         - name: Install dependencies
           run: |
             python -m pip install --upgrade pip
+            python -m pip install --upgrade torch==2.2.2 torchvision==0.17.2 torchaudio==2.2.2 --extra-index-url https://download.pytorch.org/whl/cu132
             python -m pip install --no-deps -r tests/environment.txt
         - name: Run doctests
           run: |
