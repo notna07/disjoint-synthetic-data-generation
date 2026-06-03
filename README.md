@@ -8,13 +8,14 @@ Disjoint Generative Models (DGMs) is a framework for generating synthetic data b
 The library provides a simple API for generating synthetic data using a variety of generative models and joining strategies. The library has access to a variety of generative model backends namely [SynthCity](https://github.com/vanderschaarlab/synthcity), [DataSynthesizer](https://github.com/DataResponsibly/DataSynthesizer) and [Synthpop](https://www.synthpop.org.uk/get-started.html), but additional backends can be added in the adapters module. Similarly several methods for joining are available for combining the generated data, and more can be added in the joining strategies module.
 
 ## Installation
-
+ We recommend cloning and working with the repository directly due to challenging dependencies, but the library is also available on PyPI.
  To install the library, run the following command:
 
-```bash
-pip install disjoint-generation
-```
-One of the generative model backends "synthpop" requires a working R installation on the system. Access is handled through ```subprocess``` to run an ```Rscript``` command, so make sure that the Rscript command works in the terminal.
+ ```bash
+ pip install disjoint-generation
+ ```
+
+ One of the generative model backends "synthpop" requires a working R installation on the system. Access is handled through ```subprocess``` to run an ```Rscript``` command, so make sure that the Rscript command works in the terminal.
 
 ## Tutorial and Codebooks
  
@@ -32,7 +33,7 @@ Below is codebooks that can be used to replicate the results shown in the paper.
 Additional examples for how to use the library can be seen in the documentation in the source code folder. 
 
 ## Requirements
-The library requires Python 3.10 (we use version 3.10.12) and the following packages:
+The codebase requires Python ~3.10 (we use version 3.10.11) and the following packages:
 - numpy ~= 1.26
 - pandas ~= 2.2.3
 - scipy ~= 1.12
@@ -41,7 +42,7 @@ The library requires Python 3.10 (we use version 3.10.12) and the following pack
 - DataSynthesizer ~= 0.1.13
 - pyod >= 2.0
 
-Because Synthcity sometimes causes compatibility issues we also provide an [environment.txt](environment.txt) file with a `pip freeze` of a working installation, which can be installed using `pip install -r environment.txt` and should work on Python ~3.10.11.
+Because Synthcity sometimes causes compatibility issues we also provide an [environment.txt](tests/environment.txt) file with a `pip freeze` of a working installation, which can be downloaded and installed using `pip install -r environment.txt` and should work on Python ~3.10.11.
 
 Additonally, the synthpop generative model is accessed through R (we used version 4.1.2), and requires the following R packages:
 - synthpop ~= 1.8.0
