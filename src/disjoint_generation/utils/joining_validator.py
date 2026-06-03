@@ -196,7 +196,7 @@ class JoiningValidator:
             >>> validator = JoiningValidator(LogisticRegression().fit(df_train, labels))
             >>> query_data = pd.DataFrame(np.random.rand(10, 5))
             >>> result = validator.validate(query_data)
-            Predicted good joins fraction: 0.9
+            - Predicted good joins fraction: 0.9
             >>> isinstance(result, pd.DataFrame)
             True
         """
@@ -323,7 +323,7 @@ class OneClassValidator:
             >>> validator = OneClassValidator(OneClassSVM().fit(df_train))
             >>> query_data = pd.DataFrame(np.random.rand(10, 5))
             >>> result = validator.validate(query_data)
-            Predicted good joins fraction: 0.3
+            - Predicted good joins fraction: 0.3
             >>> isinstance(result, pd.DataFrame)
             True
         """
@@ -453,7 +453,7 @@ class OutlierValidator:
             >>> validator = OutlierValidator(IForest().fit(df_train))
             >>> query_data = pd.DataFrame(np.random.rand(10, 5))
             >>> result = validator.validate(query_data)
-            Predicted good joins fraction: 1.0
+            - Predicted good joins fraction: 1.0
             >>> isinstance(result, pd.DataFrame)
             True
         """

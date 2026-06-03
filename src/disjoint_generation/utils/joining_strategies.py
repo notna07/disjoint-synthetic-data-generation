@@ -181,7 +181,7 @@ class UsingJoiningValidator(JoinStrategy):
             ...                             )
             >>> strategy = UsingJoiningValidator(validator)
             >>> result = strategy.join(dict_dfs) # doctest: +ELLIPSIS
-            Threshold auto-set to: ...
+            DGMs (validator): Threshold auto-set to: ...
             >>> isinstance(result, pd.DataFrame)
             True
             
