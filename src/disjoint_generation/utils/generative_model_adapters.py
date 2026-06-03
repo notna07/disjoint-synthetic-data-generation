@@ -13,11 +13,6 @@ from pandas import DataFrame
 from abc import ABC, abstractmethod
 from importlib.resources import files
 
-from synthcity.plugins import Plugins
-
-from DataSynthesizer.DataDescriber import DataDescriber
-from DataSynthesizer.DataGenerator import DataGenerator
-
 def _load_data(file_name: str) -> DataFrame:
     df_train = pd.read_csv(file_name + '.csv').dropna()
     return df_train
@@ -52,6 +47,18 @@ class DataGeneratorAdapter(ABC):
         """
         pass
 
+
+_SYNTHCITY_MODELS = {
+    'ctgan',
+    'adsgan',
+    'tvae',
+    'nflow',
+    'ddpm',
+    'arf',
+    'dpgan',
+    'privbayes',
+}
+
 class SynthCityAdapter(DataGeneratorAdapter):
     """ SynthCity Adapter for generating synthetic data.
 
@@ -62,7 +69,7 @@ class SynthCityAdapter(DataGeneratorAdapter):
         self.gen_model = gen_model
 
     def generate(self, train_data: str | DataFrame, num_to_generate: int = None, seed: int = None, id = 0, **kwargs) -> DataFrame:
-        """ Generate synthetic data using SynthCity.
+        """ Generate synthetic data using SynthCity. See the list of enabled models above.
 
         Reference:
             Qian, Z., Cebere, B.-C., & van der Schaar, M. (2023). Synthcity: facilitating innovative 
@@ -78,10 +85,11 @@ class SynthCityAdapter(DataGeneratorAdapter):
         Example:
             >>> adapter = SynthCityAdapter('privbayes')
             >>> df_syn = adapter.generate('tests/dummy_train') # doctest: +ELLIPSIS
+            -etc-
             >>> isinstance(df_syn, pd.DataFrame)
             True
         """
-        
+        from synthcity.plugins import Plugins
         if isinstance(train_data, str):
             df_train = _load_data(train_data)
         else:
@@ -194,7 +202,8 @@ class DataSynthesizerAdapter(DataGeneratorAdapter):
             >>> isinstance(df_syn, pd.DataFrame)
             True
         """
-
+        from DataSynthesizer.DataDescriber import DataDescriber
+        from DataSynthesizer.DataGenerator import DataGenerator
         if isinstance(train_data, str):
             train_data_name = train_data
         else:
@@ -231,6 +240,19 @@ class DebugAdapter(DataGeneratorAdapter):
             train_data = _load_data(train_data)
         return train_data
 
+def _get_adapter(gen_model: str) -> DataGeneratorAdapter:
+    if gen_model in _SYNTHCITY_MODELS:
+        return SynthCityAdapter(gen_model)
+    if gen_model == 'synthpop':
+        return SynthPopAdapter()
+    if gen_model == 'datasynthesizer':
+        return DataSynthesizerAdapter()
+    if gen_model == 'datasynthesizer-dp':
+        return DataSynthesizerAdapter(epsilon=0.1)
+    if gen_model == 'debug':
+        return DebugAdapter()
+    raise NotImplementedError("The chosen generative model could not be run!")
+
 def generate_synthetic_data(train_data: DataFrame | str, gen_model: str, num_to_generate: int = None, seed: int = None, id = 0, **kwargs) -> DataFrame:
     """ Generate synthetic data using the specified generative model.
 
@@ -248,29 +270,13 @@ def generate_synthetic_data(train_data: DataFrame | str, gen_model: str, num_to_
         >>> isinstance(df_syn, pd.DataFrame)
         True
     """
-    # TODO: stop instantiating all adapters every time
-    adapters = {
-        'ctgan': SynthCityAdapter(gen_model),
-        'adsgan': SynthCityAdapter(gen_model),
-        'tvae': SynthCityAdapter(gen_model),
-        'nflow': SynthCityAdapter(gen_model),
-        'ddpm': SynthCityAdapter(gen_model),
-        'arf': SynthCityAdapter(gen_model),
-        'dpgan': SynthCityAdapter(gen_model),
-        'privbayes': SynthCityAdapter(gen_model),
-        'synthpop': SynthPopAdapter(),
-        'datasynthesizer': DataSynthesizerAdapter(),
-        'datasynthesizer-dp': DataSynthesizerAdapter(epsilon=0.1),
-        'debug': DebugAdapter()
-    }
-
-    if gen_model in adapters:
-        adapter = adapters[gen_model]
+    if isinstance(gen_model, str):
+        adapter = _get_adapter(gen_model)
         df_syn = adapter.generate(train_data, num_to_generate, seed, id, **kwargs)
     elif isinstance(gen_model, DataGeneratorAdapter):
         df_syn = gen_model.generate(train_data, num_to_generate, seed, id, **kwargs)
     else:
-        raise NotImplementedError("The chosen generative model could not be run!")
+        raise NotImplementedError("DGMs (adapter): The chosen generative model could not be run!")
     return df_syn
 
 

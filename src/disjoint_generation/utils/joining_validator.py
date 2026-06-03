@@ -18,6 +18,11 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import OneClassSVM
 from pyod.models.iforest import IForest
 
+try:
+    from sklearn.frozen import FrozenEstimator
+except ImportError:
+    FrozenEstimator = None
+
 def _setup_training_data(dictionary_of_data_chunks: Dict[str, DataFrame],
                          num_batches_of_bad_joins: int = 2,
                          random_state: int =  None,
@@ -105,7 +110,7 @@ class JoiningValidator:
             "min_iter": 5,
             "max_iter": 100,
             "threshold": 'auto',
-            "threshold_decay": 0, 
+            "threshold_decay": 0.01, 
             'auto_threshold_percentage': 0.1
         }
         return dict
@@ -138,14 +143,14 @@ class JoiningValidator:
         base_model = copy.copy(self.model)
 
         if self.params is not None:
-            if self.verbose: print("Validator: Grid search for hyperparameters")
+            if self.verbose: print("DGMs (validator): Grid search for hyperparameters")
             grid_search = GridSearchCV(estimator=base_model, param_grid=self.params, n_jobs=-1, cv=number_of_validation_folds)
             grid_result = grid_search.fit(df_join_train, train_labels)
 
-            if self.verbose: print("Validator: Best score %f using %s" % (grid_result.best_score_, grid_result.best_params_))
+            if self.verbose: print("DGMs (validator): Best score %f using %s" % (grid_result.best_score_, grid_result.best_params_))
             estimator = grid_result.best_estimator_
         else:
-            if self.verbose: print("Validator: No search parameters specified. Using default configuration.")
+            if self.verbose: print("DGMs (validator): No search parameters specified. Using default configuration.")
             estimator = base_model
             estimator.fit(df_join_train, train_labels)
         
@@ -153,16 +158,19 @@ class JoiningValidator:
 
         score_pre = f1_score(train_labels, y_pred)
         if self.calibration_method is not None:
-            calibrated_model = CalibratedClassifierCV(estimator, cv='prefit', method=self.calibration_method)
+            if FrozenEstimator is not None:
+                calibrated_model = CalibratedClassifierCV(FrozenEstimator(estimator), method=self.calibration_method)
+            else:
+                calibrated_model = CalibratedClassifierCV(estimator, cv='prefit', method=self.calibration_method)
             calibrated_model.fit(df_join_train, train_labels)
             y_pred = calibrated_model.predict(df_join_train)
             score_post = f1_score(train_labels, y_pred)
 
             if score_post > score_pre:
-                if self.verbose: print(f"Validator: Calibration improved the model from {score_pre:.4f} to {score_post:.4f}")
+                if self.verbose: print(f"DGMs (validator): Calibration improved the model from {score_pre:.4f} to {score_post:.4f}")
                 fitted_model = calibrated_model
             else:
-                if self.verbose: print(f"Validator: Calibration did not improve the model. Using the original model.")
+                if self.verbose: print(f"DGMs (validator): Calibration did not improve the model. Using the original model.")
                 fitted_model = estimator
         else:
             fitted_model = estimator
@@ -188,7 +196,7 @@ class JoiningValidator:
             >>> validator = JoiningValidator(LogisticRegression().fit(df_train, labels))
             >>> query_data = pd.DataFrame(np.random.rand(10, 5))
             >>> result = validator.validate(query_data)
-            Predicted good joins fraction: 0.9
+            - Predicted good joins fraction: 0.9
             >>> isinstance(result, pd.DataFrame)
             True
         """
@@ -196,14 +204,14 @@ class JoiningValidator:
         pred = self.model.predict_proba(query_data.values)[:,1]
         if self.threshold == "auto":
             self.threshold = sorted(pred, reverse=True)[int(self.auto_threshold_percentage*len(query_data))]
-            print("Threshold auto-set to:", self.threshold)
+            print("DGMs (validator): Threshold auto-set to:", self.threshold)
 
             if self.save_proba:
                 from .plots import plot_proba_hist
                 plot_proba_hist(pred, save_dir='plots')
 
         pred = (pred >= self.threshold).astype(int)
-        if self.verbose: print(f'Predicted good joins fraction: {(pred==1).mean()}')
+        if self.verbose: print(f'- Predicted good joins fraction: {(pred==1).mean()}')
         return query_data.loc[pred==1]
 
 class OneClassValidator:
@@ -289,8 +297,9 @@ class OneClassValidator:
             accuracies.append(score)
 
         if self.verbose:
-            print(f'F1-Score (Good Joins): {accuracies}')
-            print(f'Mean F1: {sum(accuracies) / len(accuracies)}')
+            print("DGMs (validator): Verbose results:")
+            print(f'- F1-Score (Good Joins): {accuracies}')
+            print(f'- Mean F1: {sum(accuracies) / len(accuracies)}')
 
         self.model.fit(df_join_train[train_labels==1])
 
@@ -314,7 +323,7 @@ class OneClassValidator:
             >>> validator = OneClassValidator(OneClassSVM().fit(df_train))
             >>> query_data = pd.DataFrame(np.random.rand(10, 5))
             >>> result = validator.validate(query_data)
-            Predicted good joins fraction: 0.3
+            - Predicted good joins fraction: 0.3
             >>> isinstance(result, pd.DataFrame)
             True
         """
@@ -322,10 +331,10 @@ class OneClassValidator:
         pred = 0.5+self.model.decision_function(query_data.values)
         if self.threshold == "auto":
             self.threshold = sorted(pred, reverse=True)[int(self.auto_threshold_percentage*len(query_data))]
-            print("Threshold auto-set to:", self.threshold)
+            print("DGMs (validator): Threshold auto-set to:", self.threshold)
 
         pred = (pred >= self.threshold).astype(int)
-        if self.verbose: print(f'Predicted good joins fraction: {(pred==1).mean()}')
+        if self.verbose: print(f'- Predicted good joins fraction: {(pred==1).mean()}')
         return query_data.loc[pred==1]
 
 
@@ -418,8 +427,9 @@ class OutlierValidator:
                 accuracies.append(score)
 
             if self.verbose:
-                print(f'F1-Score (Good Joins): {accuracies}')
-                print(f'Mean F1: {sum(accuracies) / len(accuracies)}')
+                print("DGMs (validator): Verbose results:")
+                print(f'- F1-Score (Good Joins): {accuracies}')
+                print(f'- Mean F1: {sum(accuracies) / len(accuracies)}')
 
         self.model = self.model.fit(pd.concat([df_join_train_inlier, df_join_train_outlier], ignore_index=True))
 
@@ -443,7 +453,7 @@ class OutlierValidator:
             >>> validator = OutlierValidator(IForest().fit(df_train))
             >>> query_data = pd.DataFrame(np.random.rand(10, 5))
             >>> result = validator.validate(query_data)
-            Predicted good joins fraction: 1.0
+            - Predicted good joins fraction: 1.0
             >>> isinstance(result, pd.DataFrame)
             True
         """
@@ -451,10 +461,10 @@ class OutlierValidator:
         pred = -self.model.decision_function(query_data.values)+1 #multiply by -1 to map the scores from [inlier, outlier] => [0, 1] to [outlier, inlier] => [0, 1] for consistency with different framework behaviors. 
         if self.threshold == "auto":
             self.threshold = sorted(pred, reverse=False)[int(self.auto_threshold_percentage*len(query_data))]
-            print("Threshold auto-set to:", self.threshold)
+            print("DGMs (validator): Threshold auto-set to:", self.threshold)
 
         pred = (pred >= self.threshold).astype(int)
-        if self.verbose: print(f'Predicted good joins fraction: {(pred==1).mean()}')
+        if self.verbose: print(f'- Predicted good joins fraction: {(pred==1).mean()}')
         return query_data.loc[pred==1]
 
 

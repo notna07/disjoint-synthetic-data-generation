@@ -5,6 +5,7 @@
 import os
 
 import sys
+import argparse
 sys.path.append('.')
 
 import numpy as np
@@ -166,7 +167,11 @@ def experiment_runner(model, dummy_feats_size, dummy_items_size, results_file, m
 
 if __name__ == "__main__":
     
-    model = 'synthpop'
+    arg_parser = argparse.ArgumentParser(description='Run the correlation plot experiment.')
+    arg_parser.add_argument('--model', type=str, default='synthpop', help='The generative model to use.')
+    args = arg_parser.parse_args()
+
+    model = args.model
 
     dummy_feats_size = 10        # make sure it is divisible by 2
     dummy_items_size = 1200

@@ -19,9 +19,32 @@ from joblib import Parallel, delayed
 
 from syntheval import SynthEval
 
-from disjoint_generation.utils.generative_model_adapters import generate_synthetic_data
+from disjoint_generation.utils.generative_model_adapters import generate_synthetic_data, DataGeneratorAdapter
 
 NUM_EXP = 10
+
+dataset_name_dict = {
+    'al': 'alzheimers',
+    'bc': 'breast_cancer', 
+    'cc': 'cervical_cancer',
+    'hd': 'heart',
+    'hp': 'hepatitis',
+    'kd': 'kidney_disease',
+    'st': 'stroke',
+}
+
+class TabDiffAdapter(DataGeneratorAdapter):
+    """Dummy adapter to load the results made in a different repository: https://github.com/notna07/TabDiff-baseline"""
+    def __str__(self):
+        return "tabdiff"
+    def generate(self, train_data: str | DataFrame, num_to_generate: int = None, seed: int = None, id = 0, **kwargs) -> DataFrame:
+        data_name = kwargs.get('data_name')
+        
+        try:
+            df_synth = pd.read_csv(f'experiments/tabdiff_data/{data_name}/{data_name}_seed{id}/final/samples.csv')
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Could not find synthetic data for seed {id} at path: experiments/tabdiff_data/{data_name}/{data_name}_seed{id}/final/samples.csv")
+        return df_synth
 
 def worker(data_name:str, df_train: DataFrame, df_test: DataFrame, model: str, id: int, target_var: str, results_file: str, metrics) -> None:
     """ Worker function for generating synthetic data and evaluating it. """
@@ -44,7 +67,11 @@ def worker(data_name:str, df_train: DataFrame, df_test: DataFrame, model: str, i
         case 'adsgan':
             df_temp = generate_synthetic_data(df_train, model, id = np.random.randint(0, 100))
         case 'ddpm':
-            df_temp = generate_synthetic_data(df_train, model, id = np.random.randint(0, 100), kwargs={'batch_size': 128, 'n_iter': 2000, 'lr': 1e-4, 'is_classification': True})
+            kwargs = pd.read_json(f'experiments/parameter_sets/ddpm.json').to_dict()[data_name]
+            df_temp = generate_synthetic_data(df_train, model, id = np.random.randint(0, 100), **kwargs)
+        case 'tabdiff':
+            model = TabDiffAdapter()
+            df_temp = generate_synthetic_data(df_train, model, data_name = dataset_name_dict.get(data_name, data_name), id = id)
         case _:
             raise ValueError(f"Model {model} not recognized for generating synthetic data.")
 
@@ -84,9 +111,8 @@ def check_specified_splits_for_mixed_model(models: List[str], data_name_key: str
 
 
 if __name__ == '__main__':
-    from experiments.auxiliaries.plotting import make_relative_derviation_histogram
 
-    models = ['arf','tvae', 'ctgan', 'adsgan', 'ddpm']
+    models = ['arf','tvae', 'ctgan', 'adsgan', 'ddpm', 'tabdiff']
 
     metrics = {
         "pca"       : {},
@@ -131,5 +157,3 @@ if __name__ == '__main__':
 
     for key in train_data.keys():
         res = check_specified_splits_for_mixed_model(models, key, train_data[key], test_data[key], target_vars[key], metrics)
-
-    # make_relative_derviation_histogram(train_data.keys(), models)

@@ -7,6 +7,7 @@ import time
 import pandas as pd
 
 import sys
+import argparse
 sys.path.append('.')
 
 from typing import List, Dict
@@ -133,8 +134,14 @@ def make_data(model: str,
 
 if __name__ == '__main__':
 
-    NUM_REPS = 20
-    MAX_PARTITIONS = 10
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--num_reps', type=int, default=20)
+    parser.add_argument('--max_partitions', type=int, default=10)
+    parser.add_argument('--model', type=str, default='datasynthesizer')
+    args = parser.parse_args()
+
+    NUM_REPS = args.num_reps
+    MAX_PARTITIONS = args.max_partitions
 
     metrics = {
         "pca"       : {},
@@ -148,7 +155,7 @@ if __name__ == '__main__':
 
     experiment_series = ['concat', 'val_random', 'val_corr']
 
-    model = 'datasynthesizer'
+    model = args.model
 
     dataset_name = 'dm'
 

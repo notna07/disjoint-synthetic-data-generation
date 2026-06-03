@@ -2,8 +2,6 @@
 # Author: Anton D. Lautrup
 # Date: 18-11-2024
 
-import warnings
-
 import pandas as pd
 
 from pandas import DataFrame
@@ -183,7 +181,7 @@ class UsingJoiningValidator(JoinStrategy):
             ...                             )
             >>> strategy = UsingJoiningValidator(validator)
             >>> result = strategy.join(dict_dfs) # doctest: +ELLIPSIS
-            Threshold auto-set to: ...
+            DGMs (validator): Threshold auto-set to: ...
             >>> isinstance(result, pd.DataFrame)
             True
             
@@ -217,7 +215,12 @@ class UsingJoiningValidator(JoinStrategy):
 
             # Next check and warn if threshold is too high to begin with
             if while_index <= self.min_iter and len(df_good_joins) == 0:
-                warnings.warn("No good joins found in the first iterations, consider lowering the threshold!")
+                print(
+                    "DGMs (validator): No good joins found in the initial iterations; "
+                    f"iter={while_index + 1}, min_iter={self.min_iter}, "
+                    f"threshold={self.join_validator.threshold}. "
+                    "Consider lowering threshold or increasing threshold_decay.",
+                )
             
             # Finally check if we are still adding items
             if while_index >= self.min_iter:
@@ -231,8 +234,12 @@ class UsingJoiningValidator(JoinStrategy):
 
             while_index += 1
         
-        if len(df_good_joins) <= self.max_size:
-            warnings.warn(f"Expected size not reached, outputting only {len(df_good_joins)} items!")
+        if len(df_good_joins) < self.max_size:
+            print(
+                "DGMs (validator): Expected size not reached; "
+                f"requested={self.max_size}, returned={len(df_good_joins)}, "
+                f"iterations={while_index + 1}, final_threshold={self.join_validator.threshold}.",
+            )
         return df_good_joins[:self.max_size]
 
 if __name__ == "__main__":
