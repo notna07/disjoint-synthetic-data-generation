@@ -325,7 +325,7 @@ def figure6_inter_correlation_concat_tradeoff(results, model, metrics, return_fl
 
 def figure7_mixed_model_results_pointplot(results, datasets: List[str], models, dict_metric_names: Dict[str, str], mixed_model_label: str = "sp-dpgan DGM" ):
 
-    fig, ax = plt.subplots(figsize=(10, 4))
+    fig, ax = plt.subplots(figsize=(10, 3))
     colors = sns.color_palette("mako", n_colors=len(datasets))
     sns.pointplot(
         data=results[results['model']=='dgms'], x="metric", y="value", hue="dataset",
