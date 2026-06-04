@@ -7,6 +7,7 @@ import os
 import pandas as pd
 
 import sys
+import warnings
 sys.path.append('.')
 
 import pickle, json
@@ -30,6 +31,22 @@ from disjoint_generation.utils.generative_model_adapters import generate_synthet
 
 NUM_EXP = 10
 
+class CompatibilityUnpickler(pickle.Unpickler):
+    """Unpickler that remaps old module names to new ones for compatibility."""
+    def find_class(self, module, name):
+        # Remap old module name prefixes to new ones
+        old_module = 'disjoint_generative_model'
+        new_module = 'disjoint_generation'
+        
+        if module == old_module:
+            module = new_module
+        elif module.startswith(old_module + '.'):
+            # Handle submodules like disjoint_generative_model.utils.X
+            module = module.replace(old_module, new_module, 1)
+        
+        return super().find_class(module, name)
+
+
 def worker(data_name:str, df_train: DataFrame, df_test: DataFrame, model: str, id: int, target_var: str, results_file: str, metrics) -> None:
     """ Worker function for generating synthetic data and evaluating it. """
 
@@ -42,6 +59,8 @@ def worker(data_name:str, df_train: DataFrame, df_test: DataFrame, model: str, i
             df_temp = generate_synthetic_data(df_train, model, id = np.random.randint(0, 100))
         case 'datasynthesizer':
             df_temp = generate_synthetic_data(df_train, model, id = np.random.randint(0, 100))
+        case 'tabdiff':
+            df_temp = generate_synthetic_data(df_train, model, id = np.random.randint(0, 100))
         case 'dgms':           
             # JV = JoiningValidator(classifier_model_base=RandomForestClassifier(), 
             #                         model_parameter_grid=parameter_grid,  
@@ -49,11 +68,14 @@ def worker(data_name:str, df_train: DataFrame, df_test: DataFrame, model: str, i
             #                         save_proba=False,
             #                         verbose=False)
             
-            with open(f'experiments/validator_models/{data_name}_rf_opt.obj', 'rb') as file:
-                joining_validator = pickle.load(file)
+            with open(f'disjoint-synthetic-data-generation/experiments/validator_models/{data_name}_rf_opt.obj', 'rb') as file:
+                with warnings.catch_warnings():
+                    warnings.simplefilter('ignore')
+                    joining_validator = CompatibilityUnpickler(file).load()
+                # joining_validator = pickle.load(file)
             JS = UsingJoiningValidator(joining_validator, behaviour='adaptive')
 
-            with open(f'experiments/results/saved_partitionings/{data_name}_corr_parts.json', 'r') as file:
+            with open(f'disjoint-synthetic-data-generation/experiments/results/saved_partitionings/{data_name}_corr_parts.json', 'r') as file:
                 prepared_splits = json.load(file)
 
             dgms = DisjointGenerativeModels(df_train, [models[0], models[1]], prepared_splits=prepared_splits,
@@ -85,7 +107,7 @@ def check_specified_splits_for_mixed_model(models: List[str], data_name_key: str
 
     SE = SynthEval(df_train, df_test, verbose=False)
 
-    results_file = f'experiments/results/other_datasets_adapt/{models[0]}_{models[1]}_{data_name_key}.csv'
+    results_file = f'disjoint-synthetic-data-generation/experiments/results/03_mixed_models_results/{models[0]}_{models[1]}_{data_name_key}.csv'
 
     # Check if the results file exists
     if os.path.exists(results_file):
@@ -100,9 +122,8 @@ def check_specified_splits_for_mixed_model(models: List[str], data_name_key: str
 
 
 if __name__ == '__main__':
-    from experiments.auxiliaries.plotting import make_relative_derviation_histogram
 
-    models = ['synthpop', 'dpgan']
+    models = ['tabdiff', 'dpgan']
 
     metrics = {
         "pca"       : {},
@@ -116,23 +137,23 @@ if __name__ == '__main__':
         }
 
     train_data = {
-        # 'al':pd.read_csv('experiments/datasets/alzheimers_train.csv'),
-        # 'bc':pd.read_csv('experiments/datasets/breast_cancer_train.csv'), 
-        # 'cc':pd.read_csv('experiments/datasets/cervical_cancer_train.csv'),
-        # 'hd':pd.read_csv('experiments/datasets/heart_train.csv'),
-        'hp': pd.read_csv('experiments/datasets/hepatitis_train.csv'),
-        # 'kd':pd.read_csv('experiments/datasets/kidney_disease_train.csv'),
-        # 'st':pd.read_csv('experiments/datasets/stroke_train.csv'),
+        'al':pd.read_csv('disjoint-synthetic-data-generation/experiments/datasets/alzheimers_train.csv'),
+        'bc':pd.read_csv('disjoint-synthetic-data-generation/experiments/datasets/breast_cancer_train.csv'), 
+        'cc':pd.read_csv('disjoint-synthetic-data-generation/experiments/datasets/cervical_cancer_train.csv'),
+        'hd':pd.read_csv('disjoint-synthetic-data-generation/experiments/datasets/heart_train.csv'),
+        'hp': pd.read_csv('disjoint-synthetic-data-generation/experiments/datasets/hepatitis_train.csv'),
+        'kd':pd.read_csv('disjoint-synthetic-data-generation/experiments/datasets/kidney_disease_train.csv'),
+        'st':pd.read_csv('disjoint-synthetic-data-generation/experiments/datasets/stroke_train.csv'),
         }
 
     test_data = {
-        'al':pd.read_csv('experiments/datasets/alzheimers_test.csv'),
-        'bc':pd.read_csv('experiments/datasets/breast_cancer_test.csv'), 
-        'cc':pd.read_csv('experiments/datasets/cervical_cancer_test.csv'),
-        'hd':pd.read_csv('experiments/datasets/heart_test.csv'),
-        'hp': pd.read_csv('experiments/datasets/hepatitis_test.csv'),
-        'kd':pd.read_csv('experiments/datasets/kidney_disease_test.csv'),
-        'st':pd.read_csv('experiments/datasets/stroke_test.csv'),
+        'al':pd.read_csv('disjoint-synthetic-data-generation/experiments/datasets/alzheimers_test.csv'),
+        'bc':pd.read_csv('disjoint-synthetic-data-generation/experiments/datasets/breast_cancer_test.csv'), 
+        'cc':pd.read_csv('disjoint-synthetic-data-generation/experiments/datasets/cervical_cancer_test.csv'),
+        'hd':pd.read_csv('disjoint-synthetic-data-generation/experiments/datasets/heart_test.csv'),
+        'hp': pd.read_csv('disjoint-synthetic-data-generation/experiments/datasets/hepatitis_test.csv'),
+        'kd':pd.read_csv('disjoint-synthetic-data-generation/experiments/datasets/kidney_disease_test.csv'),
+        'st':pd.read_csv('disjoint-synthetic-data-generation/experiments/datasets/stroke_test.csv'),
         }
 
     target_vars = {
@@ -147,5 +168,3 @@ if __name__ == '__main__':
 
     for key in train_data.keys():
         res = check_specified_splits_for_mixed_model(models, key, train_data[key], test_data[key], target_vars[key], metrics)
-
-    make_relative_derviation_histogram(train_data.keys(), models)

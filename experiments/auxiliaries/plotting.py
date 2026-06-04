@@ -323,7 +323,7 @@ def figure6_inter_correlation_concat_tradeoff(results, model, metrics, return_fl
     else:
         plt.savefig(f"experiments/figures/figure6_correlation_tradeoff_{mode}.pdf", bbox_inches='tight')
 
-def figure7_mixed_model_results_pointplot(results, datasets: List[str], models, dict_metric_names: Dict[str, str]):
+def figure7_mixed_model_results_pointplot(results, datasets: List[str], models, dict_metric_names: Dict[str, str], mixed_model_label: str = "sp-dpgan DGM" ):
 
     fig, ax = plt.subplots(figsize=(10, 4))
     colors = sns.color_palette("mako", n_colors=len(datasets))
@@ -349,9 +349,9 @@ def figure7_mixed_model_results_pointplot(results, datasets: List[str], models, 
 
     # setting the custom legend with only the model names and the marker types
     custom_lines = [
-        Line2D([0], [0], color=colors[0], marker='*', linestyle='None', linewidth=2, markersize=8, label='sp-dpgan DGM'),
-        Line2D([0], [0], color=colors[0], marker='^', linestyle='None', markersize=8, label='dpgan'),
-        Line2D([0], [0], color=colors[0], marker='s', linestyle='None', markersize=8, label='synthpop')
+        Line2D([0], [0], color=colors[0], marker='*', linestyle='None', linewidth=2, markersize=8, label=mixed_model_label),
+        Line2D([0], [0], color=colors[0], marker='^', linestyle='None', markersize=8, label=models[1]),
+        Line2D([0], [0], color=colors[0], marker='s', linestyle='None', markersize=8, label=models[0])
     ]
 
     leg = plt.legend(handles=custom_lines, title='Models', fontsize=8, title_fontsize='9')
@@ -371,7 +371,7 @@ def figure7_mixed_model_results_pointplot(results, datasets: List[str], models, 
     ax.set_xlabel("", fontsize=8)
 
     # plt.savefig('experiments/figures/figure7_mixed_model_other_datasets.png', dpi=300, bbox_inches='tight')
-    plt.savefig('experiments/figures/figure7_mixed_model_other_datasets.pdf', dpi=300, bbox_inches='tight')
+    plt.savefig(f'experiments/figures/figure7_{models[0]}_{models[1]}_other_datasets.pdf', dpi=300, bbox_inches='tight')
     plt.show()
     pass
 
