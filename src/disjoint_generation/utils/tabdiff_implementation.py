@@ -3,7 +3,7 @@
 #   inlined here so this single file (plus the adapter in generative_model_adapters.py) 
 #   can be dropped into any repository to allow access to tabdiff.
 #
-# Sources (copied / adapted from the TabDiff repository):
+# Sources (copied / adapted from the TabDiff repository, i.e., https://github.com/MinkaiXu/TabDiff):
 #   tabdiff/modules/transformer.py
 #   tabdiff/modules/main_modules.py
 #   tabdiff/models/noise_schedule.py
@@ -16,6 +16,29 @@
 # External dependencies (must be pip-installable in the target repo):
 #   torch, numpy, pandas, scikit-learn, scipy, tqdm, tomli, tomli_w,
 #   category_encoders, etc.
+
+# ============================================================================
+# License information
+# ============================================================================
+
+# Copyright 2024 Minkai Xu
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy 
+# of this software and associated documentation files (the “Software”), to deal 
+# in the Software without restriction, including without limitation the rights 
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
+# copies of the Software, and to permit persons to whom the Software is furnished 
+# to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in 
+# all copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, 
+# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR 
+# IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 # ============================================================================
 # Standard + third-party imports
