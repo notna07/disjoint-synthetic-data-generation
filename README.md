@@ -5,7 +5,7 @@
 
 Disjoint Generative Models (DGMs) is a framework for generating synthetic data by distributing the generation of different attributes to different generative models. DGMs unlock mixed model generation, allowing the user to choose ``correct tool for the correct job'' and infers increased privacy by not having a single model that has access to all the data.
 
-The library provides a simple API for generating synthetic data using a variety of generative models and joining strategies. The library has access to a variety of generative model backends namely [SynthCity](https://github.com/vanderschaarlab/synthcity), [DataSynthesizer](https://github.com/DataResponsibly/DataSynthesizer) and [Synthpop](https://www.synthpop.org.uk/get-started.html), but additional backends can be added in the adapters module. Similarly several methods for joining are available for combining the generated data, and more can be added in the joining strategies module.
+The library provides a simple API for generating synthetic data using a variety of generative models and joining strategies. The library has access to a variety of generative model backends namely [SynthCity](https://github.com/vanderschaarlab/synthcity), [DataSynthesizer](https://github.com/DataResponsibly/DataSynthesizer), [TabDiff](https://github.com/MinkaiXu/TabDiff), and [Synthpop](https://www.synthpop.org.uk/get-started.html), but additional backends can be added in the adapters module. Similarly several methods for joining are available for combining the generated data, and more can be added in the joining strategies module.
 
 ## Installation
  We recommend cloning and working with the repository directly due to challenging dependencies, but the library is also available on PyPI.
@@ -27,8 +27,6 @@ Below is codebooks that can be used to replicate the results shown in the paper.
 | [Codebook 2](02_validated_joins.ipynb) | High-dimensional dataset example vith validation, correlated partitions study | Fig. 4, 5, 6, 13  |
 | [Codebook 3](03_specified_splits.ipynb) | Mixed-model generation and combinatorics | Fig. 7, 8, Tab. 2, 3 |
 | [Codebook 4](04_joining_validator.ipynb) | Study of the joining validator model, optimisation and calibration | Fig. 11, 12, 14 |
-| --- | --- | --- |
-| [TabDiff Baseline](https://github.com/notna07/TabDiff-baseline) | We compare to TabDiff, a state-of-the-art method for synthetic data generation. Our code and adapters for making this baseline work is provided here. | Tab. 3, Fig. 8 |
 
 Additional examples for how to use the library can be seen in the documentation in the source code folder. 
 
