@@ -4,6 +4,7 @@
 
 ### Imports
 import sys
+import warnings
 sys.path.append('.')
 
 import pickle
@@ -59,7 +60,6 @@ def model_experiment(df_train: DataFrame, df_test: DataFrame, label: str, model:
 
     dfs_list = Parallel(n_jobs=-1)(delayed(generate_synthetic_data)(df_train, model, id=i) for i in range(NUM_REPS))
     dfs = {f"rep_{i}": df_synth for i, df_synth in enumerate(dfs_list)}
-    
     res, _ = SE.benchmark(dfs, analysis_target_var=label,**metrics, rank_strategy='summation')
     
     res = res.drop(columns=[col for col in res.columns if 'error' in col])
@@ -72,17 +72,34 @@ def model_experiment(df_train: DataFrame, df_test: DataFrame, label: str, model:
 
     return results
 
+class CompatibilityUnpickler(pickle.Unpickler):
+    """Unpickler that remaps old module names to new ones for compatibility."""
+    def find_class(self, module, name):
+        # Remap old module name prefixes to new ones
+        old_module = 'disjoint_generative_model'
+        new_module = 'disjoint_generation'
+        
+        if module == old_module:
+            module = new_module
+        elif module.startswith(old_module + '.'):
+            # Handle submodules like disjoint_generative_model.utils.X
+            module = module.replace(old_module, new_module, 1)
+        
+        return super().find_class(module, name)
+
 def _single_mixed_model_experiment(df_train: DataFrame, gms: List[str], parts: Dict[str, List[str]], joining_strat: str, id) -> DataFrame:
     """ Function to do runs of the mixed model. """
 
     if joining_strat == 'valid':
         with open('experiments/validator_models/hp_rf_opt.obj', 'rb') as file:
-            joining_validator = pickle.load(file)
-        
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+                joining_validator = CompatibilityUnpickler(file).load()
+
         JS = UsingJoiningValidator(joining_validator, behaviour='adaptive')
     elif joining_strat == 'concat':
         JS = Concatenating()
-    dgms = DisjointGenerativeModels(df_train, gms, parts, joining_strategy=JS, parallel_worker_id=id*10)
+    dgms = DisjointGenerativeModels(df_train, gms, prepared_splits=parts, joining_strategy=JS, parallel_worker_id=id*10)
     dgms.join_multiplier = 4
 
     df_dgms = dgms.fit_generate()
@@ -133,6 +150,9 @@ if __name__ == '__main__':
     dpgan_results = model_experiment(df_train, df_test, label, 'dpgan', metrics)
     dpgan_results.to_csv('experiments/results/03_hepatitis_case_study/dpgan.csv')
 
+    tabdiff_results = model_experiment(df_train, df_test, label, 'tabdiff', metrics)
+    tabdiff_results.to_csv('experiments/results/03_hepatitis_case_study/tabdiff.csv')
+
     df_dgms = mixed_model_experiment(df_train, df_test, 'synthpop', 'synthpop', parts, label, exp_series, metrics)
     df_dgms.to_csv(f'experiments/results/03_hepatitis_case_study/synthpop_synthpop_{exp_series}.csv')
 
@@ -141,6 +161,9 @@ if __name__ == '__main__':
 
     df_dgms = mixed_model_experiment(df_train, df_test, 'synthpop', 'datasynthesizer-dp', parts, label, exp_series, metrics)
     df_dgms.to_csv(f'experiments/results/03_hepatitis_case_study/synthpop_datasynthesizer_{exp_series}.csv')
+
+    df_dgms = mixed_model_experiment(df_train, df_test, 'synthpop', 'tabdiff', parts, label, exp_series, metrics)
+    df_dgms.to_csv(f'experiments/results/03_hepatitis_case_study/synthpop_tabdiff_{exp_series}.csv')
 
     df_dgms = mixed_model_experiment(df_train, df_test, 'datasynthesizer-dp', 'datasynthesizer-dp', parts, label, exp_series, metrics)
     df_dgms.to_csv(f'experiments/results/03_hepatitis_case_study/datasynthesizer_datasynthesizer_{exp_series}.csv')
@@ -151,6 +174,9 @@ if __name__ == '__main__':
     df_dgms = mixed_model_experiment(df_train, df_test, 'datasynthesizer-dp', 'dpgan', parts, label, exp_series, metrics)
     df_dgms.to_csv(f'experiments/results/03_hepatitis_case_study/datasynthesizer_dpgan_{exp_series}.csv')
 
+    df_dgms = mixed_model_experiment(df_train, df_test, 'datasynthesizer-dp', 'tabdiff', parts, label, exp_series, metrics)
+    df_dgms.to_csv(f'experiments/results/03_hepatitis_case_study/datasynthesizer_tabdiff_{exp_series}.csv')
+
     df_dgms = mixed_model_experiment(df_train, df_test, 'dpgan', 'dpgan', parts, label, exp_series, metrics)
     df_dgms.to_csv(f'experiments/results/03_hepatitis_case_study/dpgan_dpgan_{exp_series}.csv')
 
@@ -159,5 +185,20 @@ if __name__ == '__main__':
 
     df_dgms = mixed_model_experiment(df_train, df_test, 'dpgan', 'datasynthesizer-dp', parts, label, exp_series, metrics)
     df_dgms.to_csv(f'experiments/results/03_hepatitis_case_study/dpgan_datasynthesizer_{exp_series}.csv')
+
+    df_dgms = mixed_model_experiment(df_train, df_test, 'dpgan', 'tabdiff', parts, label, exp_series, metrics)
+    df_dgms.to_csv(f'experiments/results/03_hepatitis_case_study/dpgan_tabdiff_{exp_series}.csv')
+    
+    df_dgms = mixed_model_experiment(df_train, df_test, 'tabdiff', 'tabdiff', parts, label, exp_series, metrics)
+    df_dgms.to_csv(f'experiments/results/03_hepatitis_case_study/tabdiff_tabdiff_{exp_series}.csv')
+
+    df_dgms = mixed_model_experiment(df_train, df_test, 'tabdiff', 'synthpop', parts, label, exp_series, metrics)
+    df_dgms.to_csv(f'experiments/results/03_hepatitis_case_study/tabdiff_synthpop_{exp_series}.csv')
+
+    df_dgms = mixed_model_experiment(df_train, df_test, 'tabdiff', 'datasynthesizer-dp', parts, label, exp_series, metrics)
+    df_dgms.to_csv(f'experiments/results/03_hepatitis_case_study/tabdiff_datasynthesizer_{exp_series}.csv')
+
+    df_dgms = mixed_model_experiment(df_train, df_test, 'tabdiff', 'dpgan', parts, label, exp_series, metrics)
+    df_dgms.to_csv(f'experiments/results/03_hepatitis_case_study/tabdiff_dpgan_{exp_series}.csv')
 
     print('Done!')

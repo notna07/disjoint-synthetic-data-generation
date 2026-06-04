@@ -76,7 +76,7 @@ class DisjointGenerativeModels:
                 split_kwargs = {'prepared_splits': self.generative_models}
         elif self.used_splits == 'correlated':
             split_kwargs = {'automated_splits': 'correlated', 'num_automated_splits': len(self.generative_models)}
-        else: # self.used_splits == 'random' or None
+        elif self.used_splits == 'random' or self.used_splits == None:
             split_kwargs = {'automated_splits': 'random', 'num_automated_splits': len(self.generative_models)}
 
         self.dm = DataManager(self.original_data.copy(), **split_kwargs)

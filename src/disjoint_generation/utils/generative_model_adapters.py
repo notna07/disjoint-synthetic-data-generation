@@ -3,12 +3,18 @@
 # Date: 18-11-2024
 
 import os
+import sys
+import json
+import glob
+import shutil
+import tempfile
 import subprocess
 
 import numpy as np
 import pandas as pd
+import torch
 
-from typing import List
+from typing import List, Optional, Union
 from pandas import DataFrame
 from abc import ABC, abstractmethod
 from importlib.resources import files
@@ -240,6 +246,160 @@ class DebugAdapter(DataGeneratorAdapter):
             train_data = _load_data(train_data)
         return train_data
 
+
+class TabDiffAdapter(DataGeneratorAdapter):
+    """Adapter that trains TabDiff and generates synthetic tabular data.
+
+    Reference:
+        Juntong Shi, Minkai Xu, Harper Hua, Hengrui Zhang, Stefano Ermon, and Jure Leskovec. Tabdiff: a 
+        mixed-type diffusion model for tabular data generation. In Proceedings of The Thirteenth International 
+        Conference on Learning Representations, ICLR 2025, Singapore, 2025. OpenReview.net.
+
+    Args:
+        task_type: 'binclass', 'multiclass', or 'regression'.
+        target_col: Name or integer index of the target column.
+            Auto-detected when None (last column, or one named 'target'/'label'/etc.).
+        num_col_idx: Explicit list of numerical column indices.
+            Auto-detected when None.
+        cat_col_idx: Explicit list of categorical column indices.
+            Auto-detected when None.
+        steps: Number of training epochs (default: 2500).
+        device: Torch device string, e.g. 'cuda:0' or 'cpu'.
+            Auto-selected when None.
+        learnable_schedule: Use per-column learnable noise schedule. Default True.
+        sample_batch_size: Batch size used during generation. Default 10000.
+
+    Example:
+        >>> adapter = TabDiffAdapter(task_type='binclass')
+        >>> df_syn = adapter.generate(df_train, num_to_generate=200, seed=0) # doctest: +SKIP
+        >>> isinstance(df_syn, pd.DataFrame) # doctest: +SKIP
+        True
+    """
+
+    name = 'tabdiff'
+
+    def __init__(
+        self,
+        task_type: str = 'binclass',
+        target_col: Union[str, int, None] = None,
+        num_col_idx: Optional[List[int]] = None,
+        cat_col_idx: Optional[List[int]] = None,
+        steps: int = 2500,
+        device: Optional[str] = None,
+        learnable_schedule: bool = True,
+        sample_batch_size: int = 10000,
+    ):
+        self.task_type = task_type
+        self.target_col = target_col
+        self.num_col_idx = num_col_idx
+        self.cat_col_idx = cat_col_idx
+        self.steps = steps
+        self.device = device
+        self.learnable_schedule = learnable_schedule
+        self.sample_batch_size = sample_batch_size
+
+    def generate(
+        self,
+        train_data: Union[str, DataFrame],
+        num_to_generate: Optional[int] = None,
+        seed: Optional[int] = None,
+        id: int = 0,
+        **kwargs,
+    ) -> DataFrame:
+        """Train TabDiff on *train_data* and return a synthetic DataFrame.
+
+        Args:
+            train_data (str, DataFrame): Training DataFrame or path to a CSV file
+                (without the '.csv' extension).
+            num_to_generate (int): Number of synthetic rows. Defaults to len(train_data).
+            seed (int): Random seed for reproducibility.
+            id (int): Instance index to prevent temp-directory collisions in parallel runs.
+
+        Returns:
+            DataFrame: Synthetic data with the same columns as the training data.
+        """
+        from .tabdiff_implementation import build_and_train, _tabdiff_find_target_column, _tabdiff_detect_column_types, _tabdiff_write_npy_files, _tabdiff_build_info, _tabdiff_restore_column_types
+
+        # --- Load data ---
+        if isinstance(train_data, str):
+            df = _load_data(train_data)
+        else:
+            df = train_data.dropna().reset_index(drop=True)
+
+        if num_to_generate is None:
+            num_to_generate = len(df)
+
+        if seed is not None:
+            torch.manual_seed(seed)
+            np.random.seed(seed)
+
+        # --- Store original dtypes for restoration ---
+        original_dtypes = df.dtypes.copy()
+
+        # --- Resolve target column ---
+        column_names = df.columns.tolist()
+        if self.target_col is None:
+            target_col_idx = _tabdiff_find_target_column(df)
+        elif isinstance(self.target_col, str):
+            target_col_idx = [column_names.index(self.target_col)]
+        else:
+            target_col_idx = [int(self.target_col)]
+
+        # --- Resolve column types ---
+        num_col_idx = self.num_col_idx
+        cat_col_idx = self.cat_col_idx
+        if num_col_idx is None or cat_col_idx is None:
+            _num, _cat = _tabdiff_detect_column_types(df, target_col_idx)
+            if num_col_idx is None:
+                num_col_idx = _num
+            if cat_col_idx is None:
+                cat_col_idx = _cat
+
+        # --- 90 / 10 train-test split ---
+        n = len(df)
+        n_train = max(1, int(n * 0.9))
+        rng = np.random.default_rng(seed if seed is not None else 42)
+        idx = rng.permutation(n)
+        df_train = df.iloc[idx[:n_train]].reset_index(drop=True)
+        df_test = df.iloc[idx[n_train:]].reset_index(drop=True)
+
+        # --- Temporary working directory ---
+        tmp_root = tempfile.mkdtemp(prefix=f'tabdiff_adapter_{id}_')
+        name = f'tabdiff_tmp_{id}'
+        try:
+            _tabdiff_write_npy_files(df_train, df_test, num_col_idx, cat_col_idx, target_col_idx, tmp_root)
+            df.to_csv(os.path.join(tmp_root, f'{name}.csv'), index=False)
+
+            info = _tabdiff_build_info(
+                df_train, df_test, num_col_idx, cat_col_idx,
+                target_col_idx, self.task_type, tmp_root, name,
+            )
+            with open(os.path.join(tmp_root, 'info.json'), 'w') as fh:
+                json.dump(info, fh, indent=2)
+
+            device = torch.device(
+                self.device if self.device else ('cuda:0' if torch.cuda.is_available() else 'cpu')
+            )
+
+            syn_df = build_and_train(
+                data_dir=tmp_root,
+                info=info,
+                num_samples=num_to_generate,
+                device=device,
+                steps=self.steps,
+                learnable_schedule=self.learnable_schedule,
+                sample_batch_size=self.sample_batch_size,
+                model_save_path=None,
+                result_save_path=None,
+            )
+            
+            # --- Restore original column types ---
+            syn_df = _tabdiff_restore_column_types(syn_df, df, original_dtypes)
+        finally:
+            shutil.rmtree(tmp_root, ignore_errors=True)
+
+        return syn_df
+
 def _get_adapter(gen_model: str) -> DataGeneratorAdapter:
     if gen_model in _SYNTHCITY_MODELS:
         return SynthCityAdapter(gen_model)
@@ -249,6 +409,9 @@ def _get_adapter(gen_model: str) -> DataGeneratorAdapter:
         return DataSynthesizerAdapter()
     if gen_model == 'datasynthesizer-dp':
         return DataSynthesizerAdapter(epsilon=0.1)
+    if gen_model == 'tabdiff':
+        device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+        return TabDiffAdapter(device=device)
     if gen_model == 'debug':
         return DebugAdapter()
     raise NotImplementedError("The chosen generative model could not be run!")
